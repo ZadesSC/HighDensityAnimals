@@ -1,0 +1,48 @@
+using HarmonyLib;
+using UnityEngine;
+using Verse;
+
+namespace HighDensityAnimals
+{
+    [StaticConstructorOnStartup]
+    public static class HighDensityAnimalsBootstrap
+    {
+        static HighDensityAnimalsBootstrap()
+        {
+            new Harmony("zades.highdensityanimals").PatchAll();
+            LongEventHandler.ExecuteWhenFinished(HighDensityAnimalsStartup.Initialize);
+        }
+    }
+
+    public sealed class HighDensityAnimalsMod : Mod
+    {
+        public static HighDensityAnimalsSettings Settings;
+
+        public HighDensityAnimalsMod(ModContentPack content) : base(content)
+        {
+            Settings = GetSettings<HighDensityAnimalsSettings>();
+        }
+
+        public override string SettingsCategory()
+        {
+            return "High Density Animals";
+        }
+
+        public override void DoSettingsWindowContents(Rect inRect)
+        {
+            Listing_Standard listing = new Listing_Standard();
+            listing.Begin(inRect);
+            listing.Label("The densifier fuses animals two at a time until the configured target density is reached.");
+            listing.GapLine();
+            listing.CheckboxLabeled("Require same sex for fusion", ref Settings.requireSameSex);
+            listing.CheckboxLabeled("Require adults only", ref Settings.requireAdultsOnly);
+            listing.CheckboxLabeled("Scale health by density", ref Settings.scaleHealth);
+            listing.CheckboxLabeled("Scale market value by density", ref Settings.scaleMarketValue);
+            listing.Gap();
+            listing.Label("Max density: " + Settings.maxDensity);
+            Settings.maxDensity = (int)listing.Slider(Settings.maxDensity, 2f, 100f);
+            listing.End();
+            Settings.Write();
+        }
+    }
+}

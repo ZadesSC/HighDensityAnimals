@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <WorkGiverDef>
+    <defName>HDA_LoadAnimalToDensifier</defName>
+    <label>load animals into densifier</label>
+    <giverClass>HighDensityAnimals.WorkGiver_LoadAnimalToDensifier</giverClass>
+    <workType>Hauling</workType>
+    <gerund>loading animals into densifier</gerund>
+    <priorityInType>95</priorityInType>
+    <canBeDoneWhileDrafted>false</canBeDoneWhileDrafted>
+    <verb>load</verb>
+    <requiredCapacities>
+      <li>Manipulation</li>
+    </requiredCapacities>
+  </WorkGiverDef>
+
+  <WorkGiverDef>
+    <defName>HDA_HaulNutritionToAnimalDensifier</defName>
+    <label>haul nutrition to densifier</label>
+    <giverClass>HighDensityAnimals.WorkGiver_HaulNutritionToAnimalDensifier</giverClass>
+    <workType>Hauling</workType>
+    <gerund>loading densifier nutrition</gerund>
+    <priorityInType>90</priorityInType>
+    <canBeDoneWhileDrafted>false</canBeDoneWhileDrafted>
+    <verb>haul</verb>
+  </WorkGiverDef>
+</Defs>

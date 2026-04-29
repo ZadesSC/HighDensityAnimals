@@ -1,0 +1,22 @@
+# Build intermediates
+bin/
+obj/
+Source/bin/
+Source/obj/
+
+# Local inspection/tool scratch space
+tmp_inspect/
+tmp_tools/
+
+# IDE/user-local files
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs and temporary files
+*.log
+*.tmp
+*~
