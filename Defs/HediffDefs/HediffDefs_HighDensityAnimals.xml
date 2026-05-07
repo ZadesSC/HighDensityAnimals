@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <HediffDef>
+    <defName>HDA_DenseAnimalMetabolism</defName>
+    <label>dense animal metabolism</label>
+    <description>Hidden marker used by High Density Animals to scale food consumption through RimWorld's hediff hunger-rate system.</description>
+    <hediffClass>HighDensityAnimals.Hediff_DenseAnimalMetabolism</hediffClass>
+    <isBad>false</isBad>
+    <scenarioCanAdd>false</scenarioCanAdd>
+  </HediffDef>
+</Defs>

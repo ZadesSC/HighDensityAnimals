@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Reflection;
 using RimWorld;
 using Verse;
 
@@ -6,6 +8,8 @@ namespace HighDensityAnimals
 {
     public static class HighDensityAnimalsStartup
     {
+        private static readonly FieldInfo SubWorkersIntField = typeof(PawnRenderNodeProperties).GetField("subWorkersInt", BindingFlags.Instance | BindingFlags.NonPublic);
+
         private static bool initialized;
 
         public static void Initialize()
@@ -17,6 +21,7 @@ namespace HighDensityAnimals
 
             initialized = true;
             InjectDenseComps();
+            InjectDenseAnimalRenderScale();
         }
 
         private static void InjectDenseComps()
@@ -51,6 +56,57 @@ namespace HighDensityAnimals
             }
 
             def.comps.Add(props);
+        }
+
+        private static void InjectDenseAnimalRenderScale()
+        {
+            PawnRenderTreeDef animalTree = DefDatabase<PawnRenderTreeDef>.GetNamedSilentFail("Animal");
+            PawnRenderNodeProperties bodyNode = FindNode(animalTree?.root, PawnRenderNodeTagDefOf.Body);
+            if (bodyNode == null)
+            {
+                return;
+            }
+
+            if (bodyNode.subworkerClasses == null)
+            {
+                bodyNode.subworkerClasses = new List<Type>();
+            }
+
+            Type scaleWorker = typeof(PawnRenderSubWorker_DenseAnimalScale);
+            if (!bodyNode.subworkerClasses.Contains(scaleWorker))
+            {
+                bodyNode.subworkerClasses.Add(scaleWorker);
+                SubWorkersIntField?.SetValue(bodyNode, null);
+            }
+        }
+
+        private static PawnRenderNodeProperties FindNode(PawnRenderNodeProperties node, PawnRenderNodeTagDef tagDef)
+        {
+            if (node == null)
+            {
+                return null;
+            }
+
+            if (node.tagDef == tagDef)
+            {
+                return node;
+            }
+
+            if (node.children == null)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < node.children.Count; i++)
+            {
+                PawnRenderNodeProperties match = FindNode(node.children[i], tagDef);
+                if (match != null)
+                {
+                    return match;
+                }
+            }
+
+            return null;
         }
     }
 }

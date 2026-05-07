@@ -27,46 +27,6 @@ namespace HighDensityAnimals
         }
     }
 
-    [HarmonyPatch(typeof(Need_Food), "FoodFallPerTickAssumingCategory")]
-    public static class Patch_NeedFood_FoodFallPerTick
-    {
-        private static readonly System.Reflection.FieldInfo PawnField = AccessTools.Field(typeof(Need), "pawn");
-
-        public static void Postfix(Need_Food __instance, ref float __result)
-        {
-            Pawn pawn = PawnField?.GetValue(__instance) as Pawn;
-            __result = DenseAnimalUtility.ScaleFloat(pawn, __result);
-        }
-    }
-
-    [HarmonyPatch(typeof(Pawn), "ButcherProducts")]
-    public static class Patch_Pawn_ButcherProducts
-    {
-        public static void Postfix(Pawn __instance, ref IEnumerable<Thing> __result)
-        {
-            int density = DenseAnimalUtility.GetDensity(__instance);
-            if (density <= 1 || __result == null)
-            {
-                return;
-            }
-
-            List<Thing> scaled = new List<Thing>();
-            foreach (Thing thing in __result.ToList())
-            {
-                int totalCount = thing.stackCount * density;
-                while (totalCount > 0)
-                {
-                    Thing split = ThingMaker.MakeThing(thing.def, thing.Stuff);
-                    split.stackCount = Math.Min(totalCount, split.def.stackLimit);
-                    scaled.Add(split);
-                    totalCount -= split.stackCount;
-                }
-            }
-
-            __result = scaled;
-        }
-    }
-
     [HarmonyPatch(typeof(Pawn), "get_HealthScale")]
     public static class Patch_Pawn_HealthScale
     {
@@ -77,7 +37,7 @@ namespace HighDensityAnimals
                 return;
             }
 
-            __result = DenseAnimalUtility.ScaleFloat(__instance, __result);
+            __result = DenseAnimalUtility.ScaleHealth(__instance, __result);
         }
     }
 

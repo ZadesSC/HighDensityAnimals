@@ -37,10 +37,14 @@ namespace HighDensityAnimals
             listing.CheckboxLabeled("Require same sex for fusion", ref Settings.requireSameSex);
             listing.CheckboxLabeled("Require adults only", ref Settings.requireAdultsOnly);
             listing.CheckboxLabeled("Scale health by density", ref Settings.scaleHealth);
+            listing.CheckboxLabeled("Scale combat stats by density", ref Settings.scaleCombatStats);
+            listing.CheckboxLabeled("Scale visual size by density", ref Settings.scaleVisualSize);
             listing.CheckboxLabeled("Scale market value by density", ref Settings.scaleMarketValue);
             listing.Gap();
             listing.Label("Max density: " + Settings.maxDensity);
             Settings.maxDensity = (int)listing.Slider(Settings.maxDensity, 2f, 100f);
+            listing.Label("Max visual scale: " + Settings.maxVisualScale.ToString("0.00") + "x");
+            Settings.maxVisualScale = listing.Slider(Settings.maxVisualScale, 1f, 3f);
             listing.End();
             Settings.Write();
         }

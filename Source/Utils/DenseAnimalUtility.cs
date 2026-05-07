@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using RimWorld;
+using UnityEngine;
 using Verse;
 
 namespace HighDensityAnimals
@@ -78,6 +79,55 @@ namespace HighDensityAnimals
             }
 
             return baseValue * GetDensity(pawn);
+        }
+
+        public static float ScaleHealth(Pawn pawn, float baseValue)
+        {
+            if (pawn == null)
+            {
+                return baseValue;
+            }
+
+            return baseValue * HealthScaleFactor(GetDensity(pawn));
+        }
+
+        public static float HealthScaleFactor(int density)
+        {
+            return Mathf.Sqrt(Mathf.Max(1, density));
+        }
+
+        public static float MeleeDamageFactor(int density)
+        {
+            density = Mathf.Max(1, density);
+            if (density <= 1)
+            {
+                return 1f;
+            }
+
+            return 1f + Mathf.Log(density, 2f) * 0.25f;
+        }
+
+        public static float VisualScaleFactor(int density)
+        {
+            density = Mathf.Max(1, density);
+            if (density <= 1)
+            {
+                return 1f;
+            }
+
+            float maxScale = HighDensityAnimalsMod.Settings?.maxVisualScale ?? 1.75f;
+            return Mathf.Min(maxScale, 1f + Mathf.Log(density, 2f) * 0.1f);
+        }
+
+        public static float ArmorOffset(int density, float multiplier = 1f)
+        {
+            density = Mathf.Max(1, density);
+            if (density <= 1)
+            {
+                return 0f;
+            }
+
+            return Mathf.Min(0.5f, Mathf.Log(density, 2f) * 0.04f) * multiplier;
         }
 
         public static bool CanBeFused(Pawn pawn)
