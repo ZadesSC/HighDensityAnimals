@@ -44,7 +44,27 @@ if ! rg -q "PawnRenderSubWorker_DenseAnimalScale|DenseAnimalRenderStartup|Transf
   exit 1
 fi
 
-if ! rg -q "ScaleHealth\\(" Source/Patches/HighDensityAnimalsPatches.cs; then
-  echo "density refactor: health patch should use sqrt health scaling helper"
+if ! rg -q "CachedHealthScaleFactor|CachedMeleeDamageFactor|CachedVisualScaleFactor|CachedArmorSharpOffset|RecalculateCachedValues" Source/Comps/CompDenseAnimal.cs; then
+  echo "density refactor: missing cached density-derived values on dense animal comp"
+  exit 1
+fi
+
+if rg -q "override void CompTick\\(" Source/Comps/CompDenseAnimal.cs; then
+  echo "density refactor: dense animal comp should not tick every game tick"
+  exit 1
+fi
+
+if rg -q "return DenseAnimalUtility\\.MeleeDamageFactor|float factor = DenseAnimalUtility\\.VisualScaleFactor" Source/Comps/CompDenseAnimal.cs Source/Rendering/PawnRenderSubWorker_DenseAnimalScale.cs; then
+  echo "density refactor: hot stat/render paths should read cached values instead of recalculating"
+  exit 1
+fi
+
+if rg -q "DenseAnimalUtility\\.GetDensity\\(pawn\\)|DenseAnimalUtility\\.ArmorOffset" Source/Hediffs/Hediff_DenseAnimalMetabolism.cs; then
+  echo "density refactor: hediff stage should use cached values pushed by comp"
+  exit 1
+fi
+
+if rg -q "ScaleHealth\\(" Source/Patches/HighDensityAnimalsPatches.cs; then
+  echo "density refactor: health patch should read cached health factor directly"
   exit 1
 fi

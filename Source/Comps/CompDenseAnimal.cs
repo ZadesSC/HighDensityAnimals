@@ -7,9 +7,15 @@ namespace HighDensityAnimals
 {
     public sealed class CompDenseAnimal : ThingComp
     {
-        private const int HediffSyncIntervalTicks = 2500;
-
         private int density = 1;
+
+        public float CachedHealthScaleFactor { get; private set; } = 1f;
+        public float CachedMeleeDamageFactor { get; private set; } = 1f;
+        public float CachedVisualScaleFactor { get; private set; } = 1f;
+        public float CachedArmorSharpOffset { get; private set; }
+        public float CachedArmorBluntOffset { get; private set; }
+        public float CachedArmorHeatOffset { get; private set; }
+        public float CachedHungerRateFactor { get; private set; } = 1f;
 
         public int Density
         {
@@ -26,6 +32,15 @@ namespace HighDensityAnimals
             {
                 density = 1;
             }
+
+            RecalculateCachedValues();
+        }
+
+        public override void PostSpawnSetup(bool respawningAfterLoad)
+        {
+            base.PostSpawnSetup(respawningAfterLoad);
+            RecalculateCachedValues();
+            EnsureDensityHediff();
         }
 
         public void SetDensity(int value)
@@ -34,6 +49,7 @@ namespace HighDensityAnimals
             density = value < 1 ? 1 : value;
             if (Density != oldDensity)
             {
+                RecalculateCachedValues();
                 EnsureDensityHediff();
             }
         }
@@ -43,13 +59,28 @@ namespace HighDensityAnimals
             SetDensity(Density + amount);
         }
 
-        public override void CompTick()
+        public void RecalculateCachedValues()
         {
-            base.CompTick();
-            if (parent is Pawn pawn && pawn.IsHashIntervalTick(HediffSyncIntervalTicks))
+            int currentDensity = Density;
+            CachedHealthScaleFactor = DenseAnimalUtility.HealthScaleFactor(currentDensity);
+            CachedMeleeDamageFactor = DenseAnimalUtility.MeleeDamageFactor(currentDensity);
+            CachedVisualScaleFactor = DenseAnimalUtility.VisualScaleFactor(currentDensity);
+            CachedHungerRateFactor = currentDensity;
+
+            if (HighDensityAnimalsMod.Settings == null || HighDensityAnimalsMod.Settings.scaleCombatStats)
             {
-                EnsureDensityHediff();
+                CachedArmorSharpOffset = DenseAnimalUtility.ArmorOffset(currentDensity);
+                CachedArmorBluntOffset = DenseAnimalUtility.ArmorOffset(currentDensity);
+                CachedArmorHeatOffset = DenseAnimalUtility.ArmorOffset(currentDensity, 0.5f);
             }
+            else
+            {
+                CachedArmorSharpOffset = 0f;
+                CachedArmorBluntOffset = 0f;
+                CachedArmorHeatOffset = 0f;
+            }
+
+            SyncExistingDensityHediff();
         }
 
         private void EnsureDensityHediff()
@@ -77,6 +108,24 @@ namespace HighDensityAnimals
             }
 
             existing.Severity = Density;
+            if (existing is Hediff_DenseAnimalMetabolism denseHediff)
+            {
+                denseHediff.ConfigureFromComp(this);
+            }
+        }
+
+        private void SyncExistingDensityHediff()
+        {
+            if (!(parent is Pawn pawn) || pawn.health?.hediffSet == null || HighDensityAnimalsDefOf.HDA_DenseAnimalMetabolism == null)
+            {
+                return;
+            }
+
+            if (pawn.health.hediffSet.GetFirstHediffOfDef(HighDensityAnimalsDefOf.HDA_DenseAnimalMetabolism) is Hediff_DenseAnimalMetabolism existing)
+            {
+                existing.Severity = Density;
+                existing.ConfigureFromComp(this);
+            }
         }
 
         public override string CompInspectStringExtra()
@@ -108,7 +157,7 @@ namespace HighDensityAnimals
 
             if ((HighDensityAnimalsMod.Settings == null || HighDensityAnimalsMod.Settings.scaleCombatStats) && stat == StatDefOf.MeleeDamageFactor)
             {
-                return DenseAnimalUtility.MeleeDamageFactor(Density);
+                return CachedMeleeDamageFactor;
             }
 
             return 1f;
@@ -132,7 +181,7 @@ namespace HighDensityAnimals
                 return;
             }
 
-            float factor = stat == StatDefOf.MeleeDamageFactor ? DenseAnimalUtility.MeleeDamageFactor(Density) : Density;
+            float factor = stat == StatDefOf.MeleeDamageFactor ? CachedMeleeDamageFactor : Density;
             sb.AppendLine(whitespace + "High density: x" + factor.ToString("0.##"));
         }
 

@@ -130,6 +130,28 @@ namespace HighDensityAnimals
             return Mathf.Min(0.5f, Mathf.Log(density, 2f) * 0.04f) * multiplier;
         }
 
+        public static void RefreshAllSpawnedDenseAnimalCaches()
+        {
+            if (Current.Game == null)
+            {
+                return;
+            }
+
+            List<Map> maps = Find.Maps;
+            for (int i = 0; i < maps.Count; i++)
+            {
+                IReadOnlyList<Pawn> pawns = maps[i].mapPawns.AllPawnsSpawned;
+                for (int j = 0; j < pawns.Count; j++)
+                {
+                    CompDenseAnimal comp = GetComp(pawns[j]);
+                    if (comp != null)
+                    {
+                        comp.RecalculateCachedValues();
+                    }
+                }
+            }
+        }
+
         public static bool CanBeFused(Pawn pawn)
         {
             return IsEligibleFusionAnimal(pawn, true);

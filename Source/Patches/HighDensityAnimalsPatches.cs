@@ -37,7 +37,13 @@ namespace HighDensityAnimals
                 return;
             }
 
-            __result = DenseAnimalUtility.ScaleHealth(__instance, __result);
+            CompDenseAnimal comp = __instance.GetComp<CompDenseAnimal>();
+            if (comp == null || comp.Density <= 1)
+            {
+                return;
+            }
+
+            __result *= comp.CachedHealthScaleFactor;
         }
     }
 

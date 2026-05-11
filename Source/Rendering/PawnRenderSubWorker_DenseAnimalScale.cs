@@ -12,13 +12,13 @@ namespace HighDensityAnimals
                 return;
             }
 
-            int density = DenseAnimalUtility.GetDensity(parms.pawn);
-            if (density <= 1)
+            CompDenseAnimal comp = parms.pawn.GetComp<CompDenseAnimal>();
+            if (comp == null || comp.Density <= 1)
             {
                 return;
             }
 
-            float factor = DenseAnimalUtility.VisualScaleFactor(density);
+            float factor = comp.CachedVisualScaleFactor;
             scale.x *= factor;
             scale.z *= factor;
         }
