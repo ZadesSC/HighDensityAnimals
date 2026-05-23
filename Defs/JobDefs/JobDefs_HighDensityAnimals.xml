@@ -9,13 +9,4 @@
     <suspendable>true</suspendable>
     <carryThingAfterJob>false</carryThingAfterJob>
   </JobDef>
-
-  <JobDef>
-    <defName>HDA_HaulNutritionToDensifier</defName>
-    <driverClass>HighDensityAnimals.JobDriver_HaulNutritionToDensifier</driverClass>
-    <reportString>Loading nutrition into densifier.</reportString>
-    <casualInterruptible>false</casualInterruptible>
-    <playerInterruptible>true</playerInterruptible>
-    <suspendable>true</suspendable>
-  </JobDef>
 </Defs>

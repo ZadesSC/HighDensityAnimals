@@ -9,6 +9,8 @@ namespace HighDensityAnimals
         private readonly StatModifier sharpArmorOffset = new StatModifier { stat = StatDefOf.ArmorRating_Sharp };
         private readonly StatModifier bluntArmorOffset = new StatModifier { stat = StatDefOf.ArmorRating_Blunt };
         private readonly StatModifier heatArmorOffset = new StatModifier { stat = StatDefOf.ArmorRating_Heat };
+        private readonly StatModifier meleeDamageFactor = new StatModifier { stat = StatDefOf.MeleeDamageFactor, value = 1f };
+        private readonly StatModifier maxNutritionFactor = new StatModifier { stat = StatDefOf.MaxNutrition, value = 1f };
 
         private readonly HediffStage denseStage = new HediffStage
         {
@@ -23,6 +25,11 @@ namespace HighDensityAnimals
                 sharpArmorOffset,
                 bluntArmorOffset,
                 heatArmorOffset
+            };
+            denseStage.statFactors = new List<StatModifier>
+            {
+                meleeDamageFactor,
+                maxNutritionFactor
             };
         }
 
@@ -42,6 +49,8 @@ namespace HighDensityAnimals
                 sharpArmorOffset.value = 0f;
                 bluntArmorOffset.value = 0f;
                 heatArmorOffset.value = 0f;
+                meleeDamageFactor.value = 1f;
+                maxNutritionFactor.value = 1f;
                 return;
             }
 
@@ -49,6 +58,8 @@ namespace HighDensityAnimals
             sharpArmorOffset.value = comp.CachedArmorSharpOffset;
             bluntArmorOffset.value = comp.CachedArmorBluntOffset;
             heatArmorOffset.value = comp.CachedArmorHeatOffset;
+            meleeDamageFactor.value = comp.CachedMeleeDamageFactor;
+            maxNutritionFactor.value = comp.CachedMaxNutritionFactor;
         }
 
         public override bool Visible => false;

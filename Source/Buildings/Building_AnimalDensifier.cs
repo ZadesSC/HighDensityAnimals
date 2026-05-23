@@ -7,16 +7,19 @@ using Verse.AI;
 
 namespace HighDensityAnimals
 {
-    public sealed class Building_AnimalDensifier : Building, IThingHolder
+    public sealed class Building_AnimalDensifier : Building, IStoreSettingsParent, IThingHolder
     {
         private const int FusionTicks = 3000;
+        private static readonly CachedTexture InsertAnimalIcon = new CachedTexture("UI/Icons/HDA_InsertAnimalDensifier");
 
         private ThingOwner innerContainer;
+        private StorageSettings allowedNutritionSettings;
         private CompPowerTrader powerComp;
         private ThingDef selectedSpecies;
         private int targetDensity = 2;
         private bool automationEnabled = true;
         private float storedNutrition;
+        private int cycleEndTick = -1;
         private int cycleTicksRemaining = -1;
 
         public Building_AnimalDensifier()
@@ -34,17 +37,21 @@ namespace HighDensityAnimals
             ThingOwnerUtility.AppendThingHoldersFromThings(outChildren, innerContainer);
         }
 
-        private Pawn SlotA => innerContainer.Count > 0 ? innerContainer[0] as Pawn : null;
-        private Pawn SlotB => innerContainer.Count > 1 ? innerContainer[1] as Pawn : null;
+        public bool StorageTabVisible => true;
+
+        private Pawn SlotA => GetAnimalSlot(0);
+        private Pawn SlotB => GetAnimalSlot(1);
+        private int AnimalCount => CountLoadedAnimals();
         private bool PoweredOn => powerComp == null || powerComp.PowerOn;
-        private bool ActiveCycle => cycleTicksRemaining > 0;
+        private bool ActiveCycle => cycleEndTick >= 0;
         public ThingDef SelectedSpecies => selectedSpecies;
         public int TargetDensity => targetDensity;
         public bool AutomationEnabled => automationEnabled;
-        public float StoredNutrition => storedNutrition;
-        public bool NeedsAnimal => automationEnabled && selectedSpecies != null && !ActiveCycle && CurrentDensity < targetDensity && innerContainer.Count < 2;
-        public bool NeedsNutrition => automationEnabled && !ActiveCycle && selectedSpecies != null && CurrentDensity < targetDensity && storedNutrition + 0.001f < NutritionRequiredForNextCycle;
+        public float StoredNutrition => NutritionStored;
+        public bool NeedsAnimal => automationEnabled && selectedSpecies != null && !ActiveCycle && CurrentDensity < targetDensity && AnimalCount < 2;
+        public bool NeedsNutrition => automationEnabled && !ActiveCycle && selectedSpecies != null && CurrentDensity < targetDensity && NutritionNeededForNextCycle > 0.001f;
         public int CurrentDensity => SlotA != null ? DenseAnimalUtility.GetDensity(SlotA) : 0;
+        public float NutritionNeededForNextCycle => Mathf.Max(0f, NutritionRequiredForNextCycle - NutritionStored);
 
         public float NutritionRequiredForNextCycle
         {
@@ -61,10 +68,40 @@ namespace HighDensityAnimals
             }
         }
 
+        private float NutritionStored
+        {
+            get
+            {
+                float total = storedNutrition;
+                for (int i = 0; i < innerContainer.Count; i++)
+                {
+                    Thing thing = innerContainer[i];
+                    if (thing is Pawn)
+                    {
+                        continue;
+                    }
+
+                    if (IsUsableNutrition(thing))
+                    {
+                        total += NutritionPerUnit(thing) * thing.stackCount;
+                    }
+                }
+
+                return total;
+            }
+        }
+
+        public override void PostMake()
+        {
+            base.PostMake();
+            EnsureAllowedNutritionSettings();
+        }
+
         public override void SpawnSetup(Map map, bool respawningAfterLoad)
         {
             base.SpawnSetup(map, respawningAfterLoad);
             powerComp = GetComp<CompPowerTrader>();
+            EnsureAllowedNutritionSettings();
         }
 
         public override void ExposeData()
@@ -75,22 +112,27 @@ namespace HighDensityAnimals
             Scribe_Values.Look(ref automationEnabled, "automationEnabled", true);
             Scribe_Values.Look(ref storedNutrition, "storedNutrition", 0f);
             Scribe_Values.Look(ref cycleTicksRemaining, "cycleTicksRemaining", -1);
+            Scribe_Values.Look(ref cycleEndTick, "cycleEndTick", -1);
+            Scribe_Deep.Look(ref allowedNutritionSettings, "allowedNutritionSettings", this);
             Scribe_Deep.Look(ref innerContainer, "innerContainer", this);
             if (Scribe.mode == LoadSaveMode.PostLoadInit && innerContainer == null)
             {
                 innerContainer = new ThingOwner<Thing>(this, false, LookMode.Deep);
             }
 
+            if (Scribe.mode == LoadSaveMode.PostLoadInit)
+            {
+                EnsureAllowedNutritionSettings();
+                if (cycleEndTick < 0 && cycleTicksRemaining > 0)
+                {
+                    cycleEndTick = Find.TickManager.TicksGame + cycleTicksRemaining;
+                }
+            }
         }
 
-        protected override void Tick()
+        public override void TickRare()
         {
-            base.Tick();
-
-            if ((Find.TickManager.TicksGame + thingIDNumber) % 30 == 0)
-            {
-                TryAbsorbNutritionAtInteractionCell();
-            }
+            base.TickRare();
 
             if (!PoweredOn || !automationEnabled)
             {
@@ -99,8 +141,7 @@ namespace HighDensityAnimals
 
             if (ActiveCycle)
             {
-                cycleTicksRemaining--;
-                if (cycleTicksRemaining <= 0)
+                if (Find.TickManager.TicksGame >= cycleEndTick)
                 {
                     CompleteCycle();
                 }
@@ -131,7 +172,7 @@ namespace HighDensityAnimals
 
             lines.Add("Configured species: " + (selectedSpecies?.label?.CapitalizeFirst() ?? "None"));
             lines.Add("Target density: " + targetDensity);
-            lines.Add("Stored nutrition: " + storedNutrition.ToString("0.0"));
+            lines.Add("Stored nutrition: " + NutritionStored.ToString("0.0"));
             lines.Add("State: " + GetStateLabel());
 
             if (SlotA != null)
@@ -146,11 +187,12 @@ namespace HighDensityAnimals
 
             if (ActiveCycle)
             {
-                lines.Add("Cycle progress: " + (1f - (float)cycleTicksRemaining / FusionTicks).ToStringPercent());
+                float ticksRemaining = Mathf.Max(0, cycleEndTick - Find.TickManager.TicksGame);
+                lines.Add("Cycle progress: " + (1f - ticksRemaining / FusionTicks).ToStringPercent());
             }
             else if (selectedSpecies != null && CurrentDensity < targetDensity)
             {
-                lines.Add("Nutrition needed for next cycle: " + NutritionRequiredForNextCycle.ToString("0.0"));
+                lines.Add("Nutrition needed for next cycle: " + NutritionNeededForNextCycle.ToString("0.0"));
             }
 
             return lines.Where(line => !line.NullOrEmpty()).ToLineList("  - ");
@@ -158,7 +200,14 @@ namespace HighDensityAnimals
 
         public override IEnumerable<Gizmo> GetGizmos()
         {
+            EnsureAllowedNutritionSettings();
+
             foreach (Gizmo gizmo in base.GetGizmos())
+            {
+                yield return gizmo;
+            }
+
+            foreach (Gizmo gizmo in StorageSettingsClipboard.CopyPasteGizmosFor(allowedNutritionSettings))
             {
                 yield return gizmo;
             }
@@ -175,6 +224,11 @@ namespace HighDensityAnimals
             {
                 defaultLabel = "Set Species",
                 defaultDesc = "Choose which animal species this machine should densify.",
+                icon = GetSpeciesCommandIcon(),
+                iconAngle = GetSpeciesCommandIconAngle(),
+                iconOffset = GetSpeciesCommandIconOffset(),
+                defaultIconColor = GetSpeciesCommandIconColor(),
+                overrideMaterial = GetSpeciesCommandIconMaterial(),
                 action = OpenSpeciesMenu
             };
 
@@ -220,7 +274,7 @@ namespace HighDensityAnimals
                 return false;
             }
 
-            if (innerContainer.Count >= 2 || pawn.def != selectedSpecies)
+            if (AnimalCount >= 2 || pawn.def != selectedSpecies)
             {
                 return false;
             }
@@ -274,36 +328,15 @@ namespace HighDensityAnimals
                 .FirstOrDefault();
         }
 
-        public bool AcceptsNutrition(Thing thing)
+        public bool CanAcceptNutrition(Thing thing)
         {
-            if (thing == null || !thing.Spawned || !thing.IngestibleNow || !thing.def.IsNutritionGivingIngestible)
+            if (!IsUsableNutrition(thing))
             {
                 return false;
             }
 
-            if (thing.def.IsEgg && DenseEggUtility.IsDenseEgg(thing))
-            {
-                return false;
-            }
-
-            return FoodUtility.GetNutrition(null, thing, thing.def) > 0f;
-        }
-
-        public Thing FindBestNutrition(Pawn worker)
-        {
-            if (!NeedsNutrition || Map == null)
-            {
-                return null;
-            }
-
-            return GenClosest.ClosestThingReachable(
-                InteractionCell,
-                Map,
-                ThingRequest.ForGroup(ThingRequestGroup.HaulableEver),
-                PathEndMode.Touch,
-                TraverseParms.For(worker),
-                9999f,
-                thing => AcceptsNutrition(thing) && worker.CanReserve(thing, 1, -1, null, false));
+            EnsureAllowedNutritionSettings();
+            return allowedNutritionSettings.AllowedToAccept(thing);
         }
 
         public void AbsorbNutrition(Thing thing)
@@ -313,8 +346,27 @@ namespace HighDensityAnimals
                 return;
             }
 
-            storedNutrition += FoodUtility.GetNutrition(null, thing, thing.def) * thing.stackCount;
+            if (IsUsableNutrition(thing))
+            {
+                storedNutrition += NutritionPerUnit(thing) * thing.stackCount;
+            }
+
             thing.Destroy(DestroyMode.Vanish);
+        }
+
+        public StorageSettings GetStoreSettings()
+        {
+            EnsureAllowedNutritionSettings();
+            return allowedNutritionSettings;
+        }
+
+        public StorageSettings GetParentStoreSettings()
+        {
+            return def.building.fixedStorageSettings;
+        }
+
+        public void Notify_SettingsChanged()
+        {
         }
 
         private void OpenSpeciesMenu()
@@ -330,7 +382,7 @@ namespace HighDensityAnimals
             {
                 options.Add(new FloatMenuOption(def.label.CapitalizeFirst(), () =>
                 {
-                    if (innerContainer.Count == 0)
+                    if (AnimalCount == 0 && !ActiveCycle)
                     {
                         selectedSpecies = def;
                     }
@@ -390,28 +442,6 @@ namespace HighDensityAnimals
             return "Ready";
         }
 
-        private void TryAbsorbNutritionAtInteractionCell()
-        {
-            if (!NeedsNutrition || Map == null)
-            {
-                return;
-            }
-
-            List<Thing> things = InteractionCell.GetThingList(Map);
-            for (int i = things.Count - 1; i >= 0; i--)
-            {
-                Thing thing = things[i];
-                if (AcceptsNutrition(thing))
-                {
-                    AbsorbNutrition(thing);
-                    if (!NeedsNutrition)
-                    {
-                        break;
-                    }
-                }
-            }
-        }
-
         private bool CanStartCycleNow()
         {
             if (SlotA == null || SlotB == null)
@@ -419,22 +449,22 @@ namespace HighDensityAnimals
                 return false;
             }
 
-            return storedNutrition + 0.001f >= NutritionRequiredForNextCycle;
+            return NutritionStored + 0.001f >= NutritionRequiredForNextCycle;
         }
 
         private void StartCycle()
         {
-            storedNutrition -= NutritionRequiredForNextCycle;
-            if (storedNutrition < 0f)
+            if (!TryConsumeNutrition(NutritionRequiredForNextCycle))
             {
-                storedNutrition = 0f;
+                return;
             }
 
-            cycleTicksRemaining = FusionTicks;
+            cycleEndTick = Find.TickManager.TicksGame + FusionTicks;
         }
 
         private void CompleteCycle()
         {
+            cycleEndTick = -1;
             cycleTicksRemaining = -1;
 
             Pawn survivor = SlotA;
@@ -481,12 +511,153 @@ namespace HighDensityAnimals
                 GenPlace.TryPlaceThing(thing, InteractionCell, Map, ThingPlaceMode.Near);
             }
 
+            cycleEndTick = -1;
             cycleTicksRemaining = -1;
         }
 
         private int GetMaxDensity()
         {
             return HighDensityAnimalsMod.Settings?.maxDensity ?? 25;
+        }
+
+        private Texture GetSpeciesCommandIcon()
+        {
+            return HasSelectedSpeciesIcon() ? selectedSpecies.uiIcon : InsertAnimalIcon.Texture;
+        }
+
+        private Color GetSpeciesCommandIconColor()
+        {
+            return HasSelectedSpeciesIcon() ? selectedSpecies.uiIconColor : Color.white;
+        }
+
+        private float GetSpeciesCommandIconAngle()
+        {
+            return HasSelectedSpeciesIcon() ? selectedSpecies.uiIconAngle : 0f;
+        }
+
+        private Vector2 GetSpeciesCommandIconOffset()
+        {
+            return HasSelectedSpeciesIcon() ? selectedSpecies.uiIconOffset : Vector2.zero;
+        }
+
+        private Material GetSpeciesCommandIconMaterial()
+        {
+            return HasSelectedSpeciesIcon() ? selectedSpecies.uiIconMaterial : null;
+        }
+
+        private bool HasSelectedSpeciesIcon()
+        {
+            return selectedSpecies != null && selectedSpecies.uiIcon != null && selectedSpecies.uiIcon != BaseContent.BadTex;
+        }
+
+        private Pawn GetAnimalSlot(int slot)
+        {
+            int seen = 0;
+            for (int i = 0; i < innerContainer.Count; i++)
+            {
+                Pawn pawn = innerContainer[i] as Pawn;
+                if (pawn == null)
+                {
+                    continue;
+                }
+
+                if (seen == slot)
+                {
+                    return pawn;
+                }
+
+                seen++;
+            }
+
+            return null;
+        }
+
+        private int CountLoadedAnimals()
+        {
+            int count = 0;
+            for (int i = 0; i < innerContainer.Count; i++)
+            {
+                if (innerContainer[i] is Pawn)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private bool TryConsumeNutrition(float nutrition)
+        {
+            if (NutritionStored + 0.001f < nutrition)
+            {
+                return false;
+            }
+
+            if (storedNutrition + 0.001f < nutrition)
+            {
+                AbsorbNutritionFromContainer(nutrition - storedNutrition);
+            }
+
+            storedNutrition -= nutrition;
+            if (storedNutrition < 0f)
+            {
+                storedNutrition = 0f;
+            }
+
+            return true;
+        }
+
+        private void AbsorbNutritionFromContainer(float nutritionNeeded)
+        {
+            for (int i = innerContainer.Count - 1; i >= 0 && nutritionNeeded > 0f; i--)
+            {
+                Thing thing = innerContainer[i];
+                if (thing is Pawn)
+                {
+                    continue;
+                }
+
+                if (!IsUsableNutrition(thing))
+                {
+                    continue;
+                }
+
+                float nutritionPerUnit = NutritionPerUnit(thing);
+                int count = Mathf.Min(thing.stackCount, Mathf.CeilToInt(nutritionNeeded / nutritionPerUnit));
+                Thing consumed = thing.SplitOff(count);
+                storedNutrition += nutritionPerUnit * count;
+                nutritionNeeded -= nutritionPerUnit * count;
+                consumed.Destroy(DestroyMode.Vanish);
+            }
+        }
+
+        private float NutritionPerUnit(Thing thing)
+        {
+            return thing?.GetStatValue(StatDefOf.Nutrition) ?? 0f;
+        }
+
+        private bool IsUsableNutrition(Thing thing)
+        {
+            if (thing == null || !thing.def.IsNutritionGivingIngestible || NutritionPerUnit(thing) <= 0f)
+            {
+                return false;
+            }
+
+            return !thing.def.IsEgg || !DenseEggUtility.IsDenseEgg(thing);
+        }
+
+        private void EnsureAllowedNutritionSettings()
+        {
+            if (allowedNutritionSettings != null)
+            {
+                return;
+            }
+
+            allowedNutritionSettings = new StorageSettings(this);
+            if (def?.building?.defaultStorageSettings != null)
+            {
+                allowedNutritionSettings.CopyFrom(def.building.defaultStorageSettings);
+            }
         }
     }
 }

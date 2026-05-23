@@ -11,6 +11,7 @@ namespace HighDensityAnimals
 
         public float CachedHealthScaleFactor { get; private set; } = 1f;
         public float CachedMeleeDamageFactor { get; private set; } = 1f;
+        public float CachedMaxNutritionFactor { get; private set; } = 1f;
         public float CachedVisualScaleFactor { get; private set; } = 1f;
         public float CachedArmorSharpOffset { get; private set; }
         public float CachedArmorBluntOffset { get; private set; }
@@ -63,24 +64,27 @@ namespace HighDensityAnimals
         {
             int currentDensity = Density;
             CachedHealthScaleFactor = DenseAnimalUtility.HealthScaleFactor(currentDensity);
-            CachedMeleeDamageFactor = DenseAnimalUtility.MeleeDamageFactor(currentDensity);
             CachedVisualScaleFactor = DenseAnimalUtility.VisualScaleFactor(currentDensity);
             CachedHungerRateFactor = currentDensity;
+            CachedMaxNutritionFactor = currentDensity;
 
             if (HighDensityAnimalsMod.Settings == null || HighDensityAnimalsMod.Settings.scaleCombatStats)
             {
+                CachedMeleeDamageFactor = DenseAnimalUtility.MeleeDamageFactor(currentDensity);
                 CachedArmorSharpOffset = DenseAnimalUtility.ArmorOffset(currentDensity);
                 CachedArmorBluntOffset = DenseAnimalUtility.ArmorOffset(currentDensity);
                 CachedArmorHeatOffset = DenseAnimalUtility.ArmorOffset(currentDensity, 0.5f);
             }
             else
             {
+                CachedMeleeDamageFactor = 1f;
                 CachedArmorSharpOffset = 0f;
                 CachedArmorBluntOffset = 0f;
                 CachedArmorHeatOffset = 0f;
             }
 
             SyncExistingDensityHediff();
+            ClearMaxNutritionCache();
         }
 
         private void EnsureDensityHediff()
@@ -96,6 +100,7 @@ namespace HighDensityAnimals
                 if (existing != null)
                 {
                     pawn.health.RemoveHediff(existing);
+                    ClearMaxNutritionCache();
                 }
 
                 return;
@@ -111,6 +116,7 @@ namespace HighDensityAnimals
             if (existing is Hediff_DenseAnimalMetabolism denseHediff)
             {
                 denseHediff.ConfigureFromComp(this);
+                ClearMaxNutritionCache();
             }
         }
 
@@ -125,6 +131,20 @@ namespace HighDensityAnimals
             {
                 existing.Severity = Density;
                 existing.ConfigureFromComp(this);
+            }
+        }
+
+        private void ClearMaxNutritionCache()
+        {
+            if (parent is not Pawn pawn)
+            {
+                return;
+            }
+
+            StatDefOf.MaxNutrition.Worker.ClearCacheForThing(pawn);
+            if (pawn.needs?.food != null && pawn.needs.food.CurLevel > pawn.needs.food.MaxLevel)
+            {
+                pawn.needs.food.CurLevel = pawn.needs.food.MaxLevel;
             }
         }
 
@@ -155,11 +175,6 @@ namespace HighDensityAnimals
                 return Density;
             }
 
-            if ((HighDensityAnimalsMod.Settings == null || HighDensityAnimalsMod.Settings.scaleCombatStats) && stat == StatDefOf.MeleeDamageFactor)
-            {
-                return CachedMeleeDamageFactor;
-            }
-
             return 1f;
         }
 
@@ -173,16 +188,14 @@ namespace HighDensityAnimals
             bool applies =
                 stat == StatDefOf.MeatAmount ||
                 stat == StatDefOf.LeatherAmount ||
-                (HighDensityAnimalsMod.Settings != null && HighDensityAnimalsMod.Settings.scaleMarketValue && stat == StatDefOf.MarketValue) ||
-                ((HighDensityAnimalsMod.Settings == null || HighDensityAnimalsMod.Settings.scaleCombatStats) && stat == StatDefOf.MeleeDamageFactor);
+                (HighDensityAnimalsMod.Settings != null && HighDensityAnimalsMod.Settings.scaleMarketValue && stat == StatDefOf.MarketValue);
 
             if (!applies)
             {
                 return;
             }
 
-            float factor = stat == StatDefOf.MeleeDamageFactor ? CachedMeleeDamageFactor : Density;
-            sb.AppendLine(whitespace + "High density: x" + factor.ToString("0.##"));
+            sb.AppendLine(whitespace + "High density: x" + Density.ToString("0.##"));
         }
 
         public override IEnumerable<StatDrawEntry> SpecialDisplayStats()

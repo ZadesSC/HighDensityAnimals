@@ -1,3 +1,4 @@
+using UnityEngine;
 using RimWorld;
 using Verse;
 using Verse.AI;
@@ -23,22 +24,60 @@ namespace HighDensityAnimals
                 return false;
             }
 
-            return densifier.FindBestNutrition(pawn) != null;
+            return FindNutrition(pawn, densifier).Thing != null;
         }
 
         public override Job JobOnThing(Pawn pawn, Thing t, bool forced = false)
         {
             Building_AnimalDensifier densifier = t as Building_AnimalDensifier;
-            Thing food = densifier?.FindBestNutrition(pawn);
-            if (food == null)
+            if (densifier == null)
             {
                 return null;
             }
 
-            Job job = JobMaker.MakeJob(DefDatabase<JobDef>.GetNamed("HDA_HaulNutritionToDensifier"), food, densifier);
-            job.targetC = densifier.InteractionCell;
-            job.count = 1;
+            ThingCount nutrition = FindNutrition(pawn, densifier);
+            if (nutrition.Thing == null)
+            {
+                return null;
+            }
+
+            Job job = HaulAIUtility.HaulToContainerJob(pawn, nutrition.Thing, densifier);
+            if (job == null)
+            {
+                return null;
+            }
+
+            job.count = Mathf.Min(job.count, nutrition.Count);
             return job;
+        }
+
+        private ThingCount FindNutrition(Pawn pawn, Building_AnimalDensifier densifier)
+        {
+            Thing thing = GenClosest.ClosestThingReachable(
+                pawn.Position,
+                pawn.Map,
+                ThingRequest.ForGroup(ThingRequestGroup.FoodSourceNotPlantOrTree),
+                PathEndMode.ClosestTouch,
+                TraverseParms.For(pawn),
+                9999f,
+                t => IsValidNutrition(pawn, densifier, t));
+
+            if (thing == null)
+            {
+                return default(ThingCount);
+            }
+
+            float nutritionPerUnit = thing.GetStatValue(StatDefOf.Nutrition);
+            int neededCount = Mathf.CeilToInt(densifier.NutritionNeededForNextCycle / nutritionPerUnit);
+            return new ThingCount(thing, Mathf.Min(thing.stackCount, neededCount));
+        }
+
+        private bool IsValidNutrition(Pawn pawn, Building_AnimalDensifier densifier, Thing thing)
+        {
+            return !thing.IsForbidden(pawn) &&
+                   pawn.CanReserve(thing) &&
+                   densifier.CanAcceptNutrition(thing) &&
+                   thing.GetStatValue(StatDefOf.Nutrition) > 0f;
         }
     }
 }

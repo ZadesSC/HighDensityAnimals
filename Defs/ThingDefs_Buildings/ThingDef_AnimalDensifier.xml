@@ -5,7 +5,7 @@
     <label>animal densifier</label>
     <description>An automated bioprocessing machine that ropes in colony animals two at a time, liquefies nutrient feedstock, and compresses the animals into denser livestock.</description>
     <thingClass>HighDensityAnimals.Building_AnimalDensifier</thingClass>
-    <tickerType>Normal</tickerType>
+    <tickerType>Rare</tickerType>
     <containedPawnsSelectable>true</containedPawnsSelectable>
     <drawerType>MapMeshAndRealTime</drawerType>
     <graphicData>
@@ -41,6 +41,9 @@
     <surfaceType>Item</surfaceType>
     <hasInteractionCell>true</hasInteractionCell>
     <interactionCellOffset>(0,0,-1)</interactionCellOffset>
+    <inspectorTabs>
+      <li>ITab_BiosculpterNutritionStorage</li>
+    </inspectorTabs>
     <comps>
       <li Class="CompProperties_Power">
         <compClass>CompPowerTrader</compClass>
@@ -53,12 +56,41 @@
     <building>
       <isEdifice>true</isEdifice>
       <ai_chillDestination>false</ai_chillDestination>
+      <haulToContainerDuration>120</haulToContainerDuration>
       <uninstallWork>1200</uninstallWork>
       <workTableRoomRole>Laboratory</workTableRoomRole>
       <buildingTags>
         <li>Production</li>
         <li>Biotech</li>
       </buildingTags>
+      <fixedStorageSettings>
+        <filter>
+          <categories>
+            <li>Foods</li>
+          </categories>
+          <specialFiltersToDisallow>
+            <li>AllowPlantFood</li>
+          </specialFiltersToDisallow>
+        </filter>
+      </fixedStorageSettings>
+      <defaultStorageSettings>
+        <filter>
+          <categories>
+            <li>Foods</li>
+          </categories>
+          <disallowedCategories>
+            <li>EggsFertilized</li>
+          </disallowedCategories>
+          <disallowedThingDefs>
+            <li>InsectJelly</li>
+            <li>MealLavish</li>
+            <li>MealLavish_Veg</li>
+            <li>MealLavish_Meat</li>
+            <li>HemogenPack</li>
+            <li>Chocolate</li>
+          </disallowedThingDefs>
+        </filter>
+      </defaultStorageSettings>
     </building>
   </ThingDef>
 </Defs>
