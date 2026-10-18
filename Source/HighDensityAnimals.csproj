@@ -13,6 +13,7 @@
     <GenerateDependencyFile>false</GenerateDependencyFile>
     <DebugType>none</DebugType>
     <GameManagedPath Condition="'$(GameManagedPath)' == '' and Exists('$(RimWorldDir)/RimWorld.app/Contents/MacOS/Assembly-CSharp.dll')">$(RimWorldDir)/RimWorld.app/Contents/MacOS</GameManagedPath>
+    <GameManagedPath Condition="'$(GameManagedPath)' == '' and Exists('$(RimWorldDir)/RimWorldMac.app/Contents/Resources/Data/Managed/Assembly-CSharp.dll')">$(RimWorldDir)/RimWorldMac.app/Contents/Resources/Data/Managed</GameManagedPath>
     <GameManagedPath Condition="'$(GameManagedPath)' == '' and Exists('$(RimWorldDir)/RimWorldWin64_Data/Managed/Assembly-CSharp.dll')">$(RimWorldDir)/RimWorldWin64_Data/Managed</GameManagedPath>
     <GameManagedPath Condition="'$(GameManagedPath)' == '' and Exists('$(RimWorldDir)/RimWorldLinux_Data/Managed/Assembly-CSharp.dll')">$(RimWorldDir)/RimWorldLinux_Data/Managed</GameManagedPath>
   </PropertyGroup>

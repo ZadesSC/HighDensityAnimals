@@ -1,6 +1,6 @@
 # High Density Animals
 
-A RimWorld 1.7 mod that fuses compatible colony animals into denser livestock. Requires Harmony. No official expansion is required.
+A RimWorld 1.6 and 1.7 mod that fuses compatible colony animals into denser livestock. Requires Harmony. No official expansion is required.
 
 ## Play
 
@@ -36,7 +36,7 @@ dotnet build Source/HighDensityAnimals.csproj -c Release \
   -p:HarmonyAssembly="/path/to/Harmony/1.7/Assemblies/0Harmony.dll"
 ```
 
-`GameManagedPath` can be supplied instead of `RimWorldDir`. The project detects macOS, Windows, and Linux managed-folder layouts; the 1.7 build and game tests in this workspace use macOS. Build output goes to `1.7/Assemblies`. Game references are not redistributed. The old 1.6 binary remains historical and is excluded by LoadFolders.xml; this release declares only 1.7 support. An optional `GameVersion=1.6` build configuration requires matching references and independent testing before a 1.6 release.
+`GameManagedPath` can be supplied instead of `RimWorldDir`. The project detects macOS, Windows, and Linux managed-folder layouts; the 1.7 build and game tests in this workspace use macOS. To build for 1.6, add `-p:GameVersion=1.6` and supply matching RimWorld 1.6 and Harmony references. Build output goes to the selected version's `Assemblies` folder. `LoadFolders.xml` selects only the matching DLL alongside the shared content. Game references are not redistributed. The automated gameplay regression suite currently targets 1.7.
 
 ## Test
 
@@ -60,7 +60,7 @@ See [tests/README.md](tests/README.md) for coverage and limitations, and [record
 
 ## Release and removal
 
-Distribute About, Defs, Languages, LoadFolders.xml, the built 1.7 folder, README, LICENSE and CHANGELOG. Keep test/audit/scratch files out of the mod package. Test the packaged copy through the same clean profiles before publishing.
+Distribute About, Defs, Languages, LoadFolders.xml, the built 1.6 and 1.7 folders, README, LICENSE and CHANGELOG. Keep test/audit/scratch files out of the mod package. Test the packaged copy through the same clean profiles before publishing.
 
 Before disabling the mod in an existing save, eject every machine and remove/downgrade density-specific animals and eggs using an appropriate save migration. There is currently no automatic uninstall migration: removing the mod loses density metadata and removes its buildings. Keep a backup when changing mods.
 

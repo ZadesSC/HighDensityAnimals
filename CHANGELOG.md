@@ -2,6 +2,7 @@
 
 ## 0.2.0
 
+- Rebuild the 1.6 assembly and explicitly select version-specific load folders, fixing the missing densifier storage tab on 1.6.
 - Build and package for RimWorld 1.7 with configurable references; remove official expansion requirements.
 - Preserve contained animals on removal and retain contents when placement fails.
 - Prevent dense egg metadata loss through stacking and splitting; consolidate fertilized egg batches without leftover duplicates.
