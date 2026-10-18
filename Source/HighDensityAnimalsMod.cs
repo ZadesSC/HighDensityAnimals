@@ -25,36 +25,38 @@ namespace HighDensityAnimals
 
         public override string SettingsCategory()
         {
-            return "High Density Animals";
+            return "HDA_HighDensityAnimals".Translate();
         }
 
         public override void DoSettingsWindowContents(Rect inRect)
         {
+            bool oldScaleHealth = Settings.scaleHealth;
+            bool oldScaleMarketValue = Settings.scaleMarketValue;
             bool oldScaleCombatStats = Settings.scaleCombatStats;
             bool oldScaleVisualSize = Settings.scaleVisualSize;
             float oldMaxVisualScale = Settings.maxVisualScale;
 
             Listing_Standard listing = new Listing_Standard();
             listing.Begin(inRect);
-            listing.Label("The densifier fuses animals two at a time until the configured target density is reached.");
+            listing.Label("HDA_Thedensifierfusesanimalstwoatatimeuntiltheconfiguredtargetdensityisrea".Translate());
             listing.GapLine();
-            listing.CheckboxLabeled("Require same sex for fusion", ref Settings.requireSameSex);
-            listing.CheckboxLabeled("Require adults only", ref Settings.requireAdultsOnly);
-            listing.CheckboxLabeled("Scale health by density", ref Settings.scaleHealth);
-            listing.CheckboxLabeled("Scale combat stats by density", ref Settings.scaleCombatStats);
-            listing.CheckboxLabeled("Scale visual size by density", ref Settings.scaleVisualSize);
-            listing.CheckboxLabeled("Scale market value by density", ref Settings.scaleMarketValue);
+            listing.CheckboxLabeled("HDA_Requiresamesexforfusion".Translate(), ref Settings.requireSameSex);
+            listing.CheckboxLabeled("HDA_Requireadultsonly".Translate(), ref Settings.requireAdultsOnly);
+            listing.CheckboxLabeled("HDA_Scalehealthbydensity".Translate(), ref Settings.scaleHealth);
+            listing.CheckboxLabeled("HDA_Scalecombatstatsbydensity".Translate(), ref Settings.scaleCombatStats);
+            listing.CheckboxLabeled("HDA_Scalevisualsizebydensity".Translate(), ref Settings.scaleVisualSize);
+            listing.CheckboxLabeled("HDA_Scalemarketvaluebydensity".Translate(), ref Settings.scaleMarketValue);
             listing.Gap();
-            listing.Label("Max density: " + Settings.maxDensity);
+            listing.Label("HDA_Maxdensity".Translate() + Settings.maxDensity);
             Settings.maxDensity = (int)listing.Slider(Settings.maxDensity, 2f, 100f);
-            listing.Label("Max visual scale: " + Settings.maxVisualScale.ToString("0.00") + "x");
+            listing.Label("HDA_Maxvisualscale".Translate() + Settings.maxVisualScale.ToString("0.00") + "x");
             Settings.maxVisualScale = listing.Slider(Settings.maxVisualScale, 1f, 3f);
             listing.End();
-            if (oldScaleCombatStats != Settings.scaleCombatStats ||
+            if (oldScaleHealth != Settings.scaleHealth || oldScaleMarketValue != Settings.scaleMarketValue || oldScaleCombatStats != Settings.scaleCombatStats ||
                 oldScaleVisualSize != Settings.scaleVisualSize ||
                 oldMaxVisualScale != Settings.maxVisualScale)
             {
-                DenseAnimalUtility.RefreshAllSpawnedDenseAnimalCaches();
+                DenseAnimalUtility.RefreshAllDenseAnimalCaches();
             }
 
             Settings.Write();

@@ -4,10 +4,11 @@
   <author>Darren</author>
   <packageId>zades.highdensityanimals</packageId>
   <supportedVersions>
-    <li>1.6</li>
+    <li>1.7</li>
   </supportedVersions>
-  <modVersion>0.1.0</modVersion>
-  <description>Experimental RimWorld mod workspace for a new animal-focused high-density design.</description>
+  <modVersion>0.2.0</modVersion>
+  <description>Fuse compatible colony animals into denser livestock. Production and food consumption scale with density. Requires Harmony; no official expansion is required.</description>
+  <loadAfter><li>brrainz.harmony</li></loadAfter>
   <modDependencies>
     <li>
       <packageId>brrainz.harmony</packageId>

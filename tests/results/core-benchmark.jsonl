@@ -1,0 +1,6 @@
+{"type":"start","version":"1.7.4977","artifactHash":"e2cc92c11a8f432d80269ba23e31f04d00403c3cf402a76f1089610595904030","mods":["brrainz.harmony","ludeon.rimworld","zades.highdensityanimals","local.hda.regression"],"expected":["benchmark"]}
+{"type":"benchmark","pawns":120,"density":1,"machines":0,"ticksPerSample":1000,"milliseconds":[446.7482,376.7374,188.0426,189.7946,185.4372,144.1369],"allocations":[6598040,7859288,7113896,6858480,6691328,8977032]}
+{"type":"benchmark","pawns":30,"density":4,"machines":0,"ticksPerSample":1000,"milliseconds":[104.5497,90.8331,87.4169,92.1884,92.3152,84.1452],"allocations":[3632744,3601344,3292064,3476672,3739544,3304744]}
+{"type":"benchmark","pawns":30,"density":4,"machines":100,"ticksPerSample":1000,"milliseconds":[86.6798,80.0746,94.9689,84.806,85.0609,80.8237],"allocations":[3846840,3677712,4060272,7659400,3826800,3601976]}
+{"type":"case","id":"benchmark","passed":true}
+{"type":"complete"}

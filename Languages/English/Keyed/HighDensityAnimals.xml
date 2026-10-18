@@ -1,0 +1,66 @@
+<?xml version='1.0' encoding='utf-8'?>
+<LanguageData>
+  <HDA_Alreadyatmaxtargetdensity>Already at max target density.</HDA_Alreadyatmaxtargetdensity>
+  <HDA_Alreadyatminimumtargetdensity>Already at minimum target density.</HDA_Alreadyatminimumtargetdensity>
+  <HDA_Automaticallypullinanimalsandnutritionuntilthetargetdensityisreached>Automatically pull in animals and nutrition until the target density is reached.</HDA_Automaticallypullinanimalsandnutritionuntilthetargetdensityisreached>
+  <HDA_Automation>Automation</HDA_Automation>
+  <HDA_Awaitingfirstanimal>Awaiting first animal</HDA_Awaitingfirstanimal>
+  <HDA_Awaitingnutrition>Awaiting nutrition</HDA_Awaitingnutrition>
+  <HDA_Awaitingnutritionandsecondanimal>Awaiting nutrition and second animal</HDA_Awaitingnutritionandsecondanimal>
+  <HDA_Awaitingsecondanimal>Awaiting second animal</HDA_Awaitingsecondanimal>
+  <HDA_Awaitingspecies>Awaiting species</HDA_Awaitingspecies>
+  <HDA_Choosewhichanimalspeciesthismachineshoulddensify>Choose which animal species this machine should densify.</HDA_Choosewhichanimalspeciesthismachineshoulddensify>
+  <HDA_Configuredspecies xml:space="preserve">Configured species: </HDA_Configuredspecies>
+  <HDA_Cycleprogress xml:space="preserve">Cycle progress: </HDA_Cycleprogress>
+  <HDA_Decreasethetargetdensity>Decrease the target density.</HDA_Decreasethetargetdensity>
+  <HDA_Denseembryodensity>Dense embryo density</HDA_Denseembryodensity>
+  <HDA_Density>Density</HDA_Density>
+  <HDA_Disabled>Disabled</HDA_Disabled>
+  <HDA_EjectContents>Eject Contents</HDA_EjectContents>
+  <HDA_Ejectloadedanimalsfromthedensifier>Eject loaded animals from the densifier.</HDA_Ejectloadedanimalsfromthedensifier>
+  <HDA_Ejecttheloadedanimalsbeforechangingspecies>Eject the loaded animals before changing species.</HDA_Ejecttheloadedanimalsbeforechangingspecies>
+  <HDA_Equivalentanimals>Equivalent animals</HDA_Equivalentanimals>
+  <HDA_Finishorcancelthecurrentcyclefirst>Finish or cancel the current cycle first.</HDA_Finishorcancelthecurrentcyclefirst>
+  <HDA_Fusing>Fusing</HDA_Fusing>
+  <HDA_Hatchresult>Hatch result</HDA_Hatchresult>
+  <HDA_HighDensityAnimals>High Density Animals</HDA_HighDensityAnimals>
+  <HDA_Highdensityx>High density: x</HDA_Highdensityx>
+  <HDA_Increasethetargetdensity>Increase the target density.</HDA_Increasethetargetdensity>
+  <HDA_Maxdensity xml:space="preserve">Max density: </HDA_Maxdensity>
+  <HDA_Maxvisualscale xml:space="preserve">Max visual scale: </HDA_Maxvisualscale>
+  <HDA_Mostoutputsarescaledtothismanyanimalsworthofproduction>Most outputs are scaled to this many animals' worth of production.</HDA_Mostoutputsarescaledtothismanyanimalsworthofproduction>
+  <HDA_Nocompatibleavailablepartner>No compatible available partner</HDA_Nocompatibleavailablepartner>
+  <HDA_Noeligiblecolonyanimals>No eligible colony animals</HDA_Noeligiblecolonyanimals>
+  <HDA_Nopower>No power</HDA_Nopower>
+  <HDA_Nutritionneededfornextcycle xml:space="preserve">Nutrition needed for next cycle: </HDA_Nutritionneededfornextcycle>
+  <HDA_Primary xml:space="preserve">Primary: </HDA_Primary>
+  <HDA_Ready>Ready</HDA_Ready>
+  <HDA_Readytoeject>Ready to eject</HDA_Readytoeject>
+  <HDA_Requireadultsonly>Require adults only</HDA_Requireadultsonly>
+  <HDA_Requiresamesexforfusion>Require same sex for fusion</HDA_Requiresamesexforfusion>
+  <HDA_Scalecombatstatsbydensity>Scale combat stats by density</HDA_Scalecombatstatsbydensity>
+  <HDA_Scalehealthbydensity>Scale health by density</HDA_Scalehealthbydensity>
+  <HDA_Scalemarketvaluebydensity>Scale market value by density</HDA_Scalemarketvaluebydensity>
+  <HDA_Scalevisualsizebydensity>Scale visual size by density</HDA_Scalevisualsizebydensity>
+  <HDA_Secondary xml:space="preserve">Secondary: </HDA_Secondary>
+  <HDA_SetSpecies>Set Species</HDA_SetSpecies>
+  <HDA_State xml:space="preserve">State: </HDA_State>
+  <HDA_Storednutrition xml:space="preserve">Stored nutrition: </HDA_Storednutrition>
+  <HDA_TargetDecrease>Target -</HDA_TargetDecrease>
+  <HDA_TargetIncrease>Target +</HDA_TargetIncrease>
+  <HDA_Targetdensity xml:space="preserve">Target density: </HDA_Targetdensity>
+  <HDA_Thedensifierfusesanimalstwoatatimeuntiltheconfiguredtargetdensityisrea>The densifier fuses animals two at a time until the configured target density is reached.</HDA_Thedensifierfusesanimalstwoatatimeuntiltheconfiguredtargetdensityisrea>
+  <HDA_Thisanimalrepresentsmultiplefusedanimals>This animal represents multiple fused animals.</HDA_Thisanimalrepresentsmultiplefusedanimals>
+  <HDA_Thisfertilizedeggcontainsonedenseembryoratherthanmultiplenormaleggs>This fertilized egg contains one dense embryo rather than multiple normal eggs.</HDA_Thisfertilizedeggcontainsonedenseembryoratherthanmultiplenormaleggs>
+  <HDA_Whenthisegghatchesitproducesoneoffspringwiththesamedensity>When this egg hatches, it produces one offspring with the same density.</HDA_Whenthisegghatchesitproducesoneoffspringwiththesamedensity>
+  <HDA_animals>animals</HDA_animals>
+  <HDA_DensityExplanation>High density: ×{0}</HDA_DensityExplanation>
+  <HDA_AnimalInspection>Density: {0}
+Equivalent to {0} {1}</HDA_AnimalInspection>
+  <HDA_EggInspection>Dense embryo density: {0}
+Hatches into: {1}</HDA_EggInspection>
+  <HDA_DenseHatchResult>1 dense {0} (density {1})</HDA_DenseHatchResult>
+  <HDA_IncompatibleContents>Loaded animals are incompatible; eject contents</HDA_IncompatibleContents>
+  <HDA_PrimaryAnimal>Primary: {0} (density {1})</HDA_PrimaryAnimal>
+  <HDA_SecondaryAnimal>Secondary: {0} (density {1})</HDA_SecondaryAnimal>
+</LanguageData>

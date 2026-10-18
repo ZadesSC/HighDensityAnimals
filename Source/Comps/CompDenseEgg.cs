@@ -33,16 +33,18 @@ namespace HighDensityAnimals
         {
             density = newDensity < 1 ? 1 : newDensity;
             sourceRace = newSourceRace;
+            StatDefOf.MarketValue.Worker.ClearCacheForThing(parent);
+        }
+
+        public override void PostSplitOff(Thing piece)
+        {
+            base.PostSplitOff(piece);
+            DenseEggUtility.GetComp(piece)?.Configure(Density, sourceRace);
         }
 
         public override bool AllowStackWith(Thing other)
         {
-            if (Density <= 1)
-            {
-                return true;
-            }
-
-            return false;
+            return Density <= 1 && DenseEggUtility.GetEggDensity(other) <= 1;
         }
 
         public override string CompInspectStringExtra()
@@ -53,22 +55,7 @@ namespace HighDensityAnimals
             }
 
             string hatchLabel = DenseEggUtility.GetHatchLabel(parent, sourceRace);
-            return "Dense embryo density: " + Density + "\nHatches into: 1 dense " + hatchLabel + " (Density " + Density + ")";
-        }
-
-        public override float GetStatFactor(StatDef stat)
-        {
-            if (Density <= 1)
-            {
-                return 1f;
-            }
-
-            if (HighDensityAnimalsMod.Settings != null && HighDensityAnimalsMod.Settings.scaleMarketValue && stat == StatDefOf.MarketValue)
-            {
-                return Density;
-            }
-
-            return 1f;
+            return "HDA_EggInspection".Translate(Density, "HDA_DenseHatchResult".Translate(hatchLabel, Density));
         }
 
         public override IEnumerable<StatDrawEntry> SpecialDisplayStats()
@@ -80,9 +67,9 @@ namespace HighDensityAnimals
 
             yield return new StatDrawEntry(
                 StatCategoryDefOf.BasicsNonPawn,
-                "Dense embryo density",
+                "HDA_Denseembryodensity".Translate(),
                 Density.ToString(),
-                "This fertilized egg contains one dense embryo rather than multiple normal eggs.",
+                "HDA_Thisfertilizedeggcontainsonedenseembryoratherthanmultiplenormaleggs".Translate(),
                 9990,
                 null,
                 null,
@@ -90,9 +77,9 @@ namespace HighDensityAnimals
 
             yield return new StatDrawEntry(
                 StatCategoryDefOf.AnimalProductivity,
-                "Hatch result",
-                "1 dense " + DenseEggUtility.GetHatchLabel(parent, sourceRace) + " (Density " + Density + ")",
-                "When this egg hatches, it produces one offspring with the same density.",
+                "HDA_Hatchresult".Translate(),
+                "HDA_DenseHatchResult".Translate(DenseEggUtility.GetHatchLabel(parent, sourceRace), Density),
+                "HDA_Whenthisegghatchesitproducesoneoffspringwiththesamedensity".Translate(),
                 9985,
                 null,
                 null,

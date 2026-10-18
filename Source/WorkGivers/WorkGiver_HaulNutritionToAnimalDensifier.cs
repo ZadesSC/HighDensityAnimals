@@ -19,7 +19,7 @@ namespace HighDensityAnimals
                 return false;
             }
 
-            if (!pawn.CanReserve(densifier, 1, -1, null, forced))
+            if (densifier.IsForbidden(pawn) || !pawn.CanReserveAndReach(densifier, PathEndMode.Touch, Danger.Some, 1, -1, null, forced))
             {
                 return false;
             }

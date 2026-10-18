@@ -1,37 +1,36 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
+    <GameVersion Condition="'$(GameVersion)' == ''">1.7</GameVersion>
+    <TargetFramework Condition="'$(GameVersion)' == '1.7'">net10.0</TargetFramework>
+    <TargetFramework Condition="'$(GameVersion)' == '1.6'">net48</TargetFramework>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
+    <Version>0.2.0</Version>
     <AssemblyName>HighDensityAnimals</AssemblyName>
-    <RootNamespace>HighDensityAnimals</RootNamespace>
-    <OutputPath>..\1.6\Assemblies\</OutputPath>
+    <OutputPath>../$(GameVersion)/Assemblies/</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
     <DebugType>none</DebugType>
-    <DebugSymbols>false</DebugSymbols>
+    <GameManagedPath Condition="'$(GameManagedPath)' == '' and Exists('$(RimWorldDir)/RimWorld.app/Contents/MacOS/Assembly-CSharp.dll')">$(RimWorldDir)/RimWorld.app/Contents/MacOS</GameManagedPath>
+    <GameManagedPath Condition="'$(GameManagedPath)' == '' and Exists('$(RimWorldDir)/RimWorldWin64_Data/Managed/Assembly-CSharp.dll')">$(RimWorldDir)/RimWorldWin64_Data/Managed</GameManagedPath>
+    <GameManagedPath Condition="'$(GameManagedPath)' == '' and Exists('$(RimWorldDir)/RimWorldLinux_Data/Managed/Assembly-CSharp.dll')">$(RimWorldDir)/RimWorldLinux_Data/Managed</GameManagedPath>
   </PropertyGroup>
-
+  <Target Name="ValidateGameReferences" BeforeTargets="ResolveReferences">
+    <Error Condition="!Exists('$(GameManagedPath)/Assembly-CSharp.dll')" Text="Set RimWorldDir or GameManagedPath to the matching RimWorld $(GameVersion) installation." />
+    <Error Condition="!Exists('$(HarmonyAssembly)')" Text="Set HarmonyAssembly to the matching Harmony 0Harmony.dll." />
+  </Target>
   <ItemGroup>
-    <Reference Include="Assembly-CSharp">
-      <HintPath Condition="Exists('/mnt/g/Games/Steam/steamapps/common/RimWorld/RimWorldWin64_Data/Managed/Assembly-CSharp.dll')">/mnt/g/Games/Steam/steamapps/common/RimWorld/RimWorldWin64_Data/Managed/Assembly-CSharp.dll</HintPath>
-      <HintPath Condition="Exists('G:\\Games\\Steam\\steamapps\\common\\RimWorld\\RimWorldWin64_Data\\Managed\\Assembly-CSharp.dll')">G:\Games\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="UnityEngine">
-      <HintPath Condition="Exists('/mnt/g/Games/Steam/steamapps/common/RimWorld/RimWorldWin64_Data/Managed/UnityEngine.dll')">/mnt/g/Games/Steam/steamapps/common/RimWorld/RimWorldWin64_Data/Managed/UnityEngine.dll</HintPath>
-      <HintPath Condition="Exists('G:\\Games\\Steam\\steamapps\\common\\RimWorld\\RimWorldWin64_Data\\Managed\\UnityEngine.dll')">G:\Games\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath Condition="Exists('/mnt/g/Games/Steam/steamapps/common/RimWorld/RimWorldWin64_Data/Managed/UnityEngine.CoreModule.dll')">/mnt/g/Games/Steam/steamapps/common/RimWorld/RimWorldWin64_Data/Managed/UnityEngine.CoreModule.dll</HintPath>
-      <HintPath Condition="Exists('G:\\Games\\Steam\\steamapps\\common\\RimWorld\\RimWorldWin64_Data\\Managed\\UnityEngine.CoreModule.dll')">G:\Games\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="0Harmony">
-      <HintPath Condition="Exists('/mnt/g/Games/Steam/steamapps/workshop/content/294100/1127530465/1.6/Assemblies/0Harmony.dll')">/mnt/g/Games/Steam/steamapps/workshop/content/294100/1127530465/1.6/Assemblies/0Harmony.dll</HintPath>
-      <HintPath Condition="Exists('G:\\Games\\Steam\\steamapps\\workshop\\content\\294100\\1127530465\\1.6\\Assemblies\\0Harmony.dll')">G:\Games\Steam\steamapps\workshop\content\294100\1127530465\1.6\Assemblies\0Harmony.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(GameManagedPath)/Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(HarmonyAssembly)</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <ItemGroup Condition="'$(GameVersion)' == '1.7'">
+    <Reference Include="UnityStubs"><HintPath>$(GameManagedPath)/UnityStubs.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Waylith"><HintPath>$(GameManagedPath)/Waylith.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <ItemGroup Condition="'$(GameVersion)' == '1.6'">
+    <Reference Include="UnityEngine"><HintPath>$(GameManagedPath)/UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameManagedPath)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
   </ItemGroup>
 </Project>

@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Text.RegularExpressions;
 using HarmonyLib;
 using RimWorld;
 using Verse;
@@ -47,6 +45,19 @@ namespace HighDensityAnimals
         }
     }
 
+    [HarmonyPatch(typeof(StatWorker_MarketValue), nameof(StatWorker_MarketValue.GetValueUnfinalized))]
+    public static class Patch_DenseThing_MarketValue
+    {
+        public static void Postfix(StatRequest req, StatDef ___stat, ref float __result)
+        {
+            // Vanilla's pawn branch returns before consulting ThingComp stat factors.
+            if (___stat != StatDefOf.MarketValue || HighDensityAnimalsMod.Settings == null ||
+                !HighDensityAnimalsMod.Settings.scaleMarketValue) return;
+            if (req.Thing is Pawn pawn) __result *= DenseAnimalUtility.GetDensity(pawn);
+            else if (req.Thing != null) __result *= DenseEggUtility.GetEggDensity(req.Thing);
+        }
+    }
+
     [HarmonyPatch(typeof(CompEggLayer), "ProduceEgg")]
     public static class Patch_CompEggLayer_ProduceEgg
     {
@@ -62,32 +73,8 @@ namespace HighDensityAnimals
             if (__result.def == __instance.Props.eggFertilizedDef)
             {
                 int embryoDensity = density * Math.Max(1, __result.stackCount);
-                Thing denseEggThing = __result;
-
-                if (__result.Spawned && __result.stackCount > 1)
-                {
-                    denseEggThing = __result.SplitOff(1);
-                    if (denseEggThing != null)
-                    {
-                        GenPlace.TryPlaceThing(denseEggThing, __result.PositionHeld, __result.MapHeld, ThingPlaceMode.Near);
-                    }
-                }
-                else if (__result.stackCount > 1)
-                {
-                    __result.stackCount = 1;
-                }
-
-                if (denseEggThing != null)
-                {
-                    denseEggThing.stackCount = 1;
-                    CompDenseEgg denseEgg = DenseEggUtility.GetComp(denseEggThing);
-                    if (denseEgg != null)
-                    {
-                        denseEgg.Configure(embryoDensity, pawn.def);
-                    }
-
-                    __result = denseEggThing;
-                }
+                __result.stackCount = 1;
+                DenseEggUtility.GetComp(__result)?.Configure(embryoDensity, pawn.def);
             }
             else
             {
@@ -116,7 +103,7 @@ namespace HighDensityAnimals
         [ThreadStatic]
         private static bool reentrant;
 
-        public static void Postfix(Hediff_Pregnant __instance, Pawn mother, Pawn father)
+        public static void Postfix(Pawn mother, Pawn father)
         {
             if (reentrant)
             {
@@ -144,140 +131,43 @@ namespace HighDensityAnimals
         }
     }
 
-    [HarmonyPatch(typeof(Pawn), nameof(Pawn.SpecialDisplayStats))]
-    public static class Patch_Pawn_SpecialDisplayStats
+    [HarmonyPatch(typeof(RaceProperties), nameof(RaceProperties.SpecialDisplayStats))]
+    public static class Patch_RaceProperties_SpecialDisplayStats
     {
-        private static readonly FieldInfo CategoryField = AccessTools.Field(typeof(StatDrawEntry), "category");
-        private static readonly FieldInfo ExplanationField = AccessTools.Field(typeof(StatDrawEntry), "explanationText");
-        private static readonly FieldInfo OverrideReportTextField = AccessTools.Field(typeof(StatDrawEntry), "overrideReportText");
-        private static readonly FieldInfo OverrideReportTitleField = AccessTools.Field(typeof(StatDrawEntry), "overrideReportTitle");
-        private static readonly FieldInfo HyperlinksField = AccessTools.Field(typeof(StatDrawEntry), "hyperlinks");
-        private static readonly FieldInfo ForceUnfinalizedField = AccessTools.Field(typeof(StatDrawEntry), "forceUnfinalizedMode");
-        private static readonly FieldInfo OverridesHideStatsField = AccessTools.Field(typeof(StatDrawEntry), "overridesHideStats");
-
-        public static void Postfix(Pawn __instance, ref IEnumerable<StatDrawEntry> __result)
+        public static void Postfix(ThingDef parentDef, StatRequest req, ref IEnumerable<StatDrawEntry> __result)
         {
-            int density = DenseAnimalUtility.GetDensity(__instance);
-            if (density <= 1 || __result == null)
+            int density = DenseAnimalUtility.GetDensity(req.Pawn ?? req.Thing as Pawn);
+            if (density <= 1 || __result == null) return;
+            ThingDef def = parentDef;
+            // Match the game's translation keys, then calculate from numbers rather than parsing
+            // localized display strings. Individual product values remain per unit.
+            var replacements = new Dictionary<string, float>
             {
-                return;
-            }
-
+                { "Stat_Animal_AdultMeatAmount", AnimalProductionUtility.AdultMeatAmount(def) * density },
+                { "Stat_Animal_MeatPerDayDuringGrowth", AnimalProductionUtility.MeatPerDayDuringGrowth(def) * density },
+                { "Stat_Animal_GrassToMaintain", AnimalProductionUtility.GrassToMaintain(def) * density },
+                { "Stat_Animal_EggsPerYear", AnimalProductionUtility.EggsPerYear(def) * density },
+                { "Stat_Animal_EggNutritionYearly", AnimalProductionUtility.EggNutritionPerYear(def) * density },
+                { "Stat_Animal_EggMarketValueYearly", AnimalProductionUtility.EggMarketValuePerYear(def) * density },
+                { "Stat_Animal_MilkAmount", (def.GetCompProperties<CompProperties_Milkable>()?.milkAmount ?? 0) * density },
+                { "Stat_Animal_MilkPerYear", AnimalProductionUtility.MilkPerYear(def) * density },
+                { "Stat_Animal_MilkValuePerYear", AnimalProductionUtility.MilkMarketValuePerYear(def) * density },
+                { "Stat_Animal_WoolAmount", (def.GetCompProperties<CompProperties_Shearable>()?.woolAmount ?? 0) * density },
+                { "Stat_Animal_WoolPerYear", AnimalProductionUtility.WoolPerYear(def) * density },
+                { "Stat_Animal_WoolValuePerYear", AnimalProductionUtility.WoolMarketValuePerYear(def) * density }
+            };
             List<StatDrawEntry> entries = __result.ToList();
             for (int i = 0; i < entries.Count; i++)
-            {
-                StatDrawEntry entry = entries[i];
-                string label = entry.LabelCap;
-                if (label == "Eggs per year" ||
-                    label == "Egg nutrition per year" ||
-                    label == "Egg market value per year" ||
-                    label == "Grass to maintain" ||
-                    label == "Meat per day during growth")
-                {
-                    entries[i] = ReplaceEntry(entry, density);
-                }
-            }
-
+                foreach (var item in replacements)
+                    if (entries[i].LabelCap == item.Key.Translate().CapitalizeFirst())
+                    {
+                        string value = item.Key.Contains("Value") ? item.Value.ToStringMoney() : item.Value.ToString("0.##");
+                        entries[i] = new StatDrawEntry(StatCategoryDefOf.AnimalProductivity, item.Key.Translate(), value,
+                            (item.Key + "Desc").Translate() + "\n\n" + "HDA_DensityExplanation".Translate(density),
+                            entries[i].DisplayPriorityWithinCategory);
+                        break;
+                    }
             __result = entries;
-        }
-
-        private static StatDrawEntry ReplaceEntry(StatDrawEntry original, int density)
-        {
-            string scaledValue = ScaleValueString(original.ValueString, density);
-            string explanation = GetExplanationText(original);
-            if (!explanation.NullOrEmpty())
-            {
-                explanation += "\n\nHigh density: x" + density;
-            }
-            else
-            {
-                explanation = "High density: x" + density;
-            }
-
-            return new StatDrawEntry(
-                GetCategory(original),
-                original.LabelCap,
-                scaledValue,
-                explanation,
-                original.DisplayPriorityWithinCategory,
-                GetOverrideReportTitle(original),
-                GetHyperlinks(original),
-                GetForceUnfinalizedMode(original),
-                GetOverridesHideStats(original));
-        }
-
-        private static StatCategoryDef GetCategory(StatDrawEntry entry)
-        {
-            return CategoryField?.GetValue(entry) as StatCategoryDef ?? StatCategoryDefOf.AnimalProductivity;
-        }
-
-        private static string GetExplanationText(StatDrawEntry entry)
-        {
-            return OverrideReportTextField?.GetValue(entry) as string ?? ExplanationField?.GetValue(entry) as string;
-        }
-
-        private static string GetOverrideReportTitle(StatDrawEntry entry)
-        {
-            return OverrideReportTitleField?.GetValue(entry) as string;
-        }
-
-        private static IEnumerable<Dialog_InfoCard.Hyperlink> GetHyperlinks(StatDrawEntry entry)
-        {
-            return HyperlinksField?.GetValue(entry) as IEnumerable<Dialog_InfoCard.Hyperlink>;
-        }
-
-        private static bool GetForceUnfinalizedMode(StatDrawEntry entry)
-        {
-            return ForceUnfinalizedField != null && ForceUnfinalizedField.GetValue(entry) is bool value && value;
-        }
-
-        private static bool GetOverridesHideStats(StatDrawEntry entry)
-        {
-            return OverridesHideStatsField != null && OverridesHideStatsField.GetValue(entry) is bool value && value;
-        }
-
-        private static string ScaleValueString(string valueString, int density)
-        {
-            if (valueString.NullOrEmpty())
-            {
-                return valueString;
-            }
-
-            string trimmed = valueString.Trim();
-            bool isCurrency = trimmed.Contains("$");
-            Match match = Regex.Match(trimmed, @"-?\d+(?:,\d{3})*(?:\.\d+)?");
-            if (!match.Success)
-            {
-                return valueString;
-            }
-
-            string numericPart = match.Value.Replace(",", string.Empty);
-            if (!float.TryParse(numericPart, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float parsed))
-            {
-                return valueString;
-            }
-
-            float scaled = parsed * density;
-            int decimals = 0;
-            int decimalIndex = match.Value.IndexOf('.');
-            if (decimalIndex >= 0)
-            {
-                decimals = match.Value.Length - decimalIndex - 1;
-            }
-
-            string format = decimals > 0 ? "F" + decimals : "0";
-            string replacement = scaled.ToString(format, System.Globalization.CultureInfo.InvariantCulture);
-            if (isCurrency)
-            {
-                replacement = "$" + replacement;
-            }
-
-            if (trimmed.StartsWith("$") && match.Index == 1)
-            {
-                return replacement + trimmed.Substring(match.Index + match.Length);
-            }
-
-            return valueString.Substring(0, match.Index) + replacement + valueString.Substring(match.Index + match.Length);
         }
     }
 }

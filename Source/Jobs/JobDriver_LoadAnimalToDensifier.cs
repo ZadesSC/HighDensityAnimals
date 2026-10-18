@@ -73,10 +73,9 @@ namespace HighDensityAnimals
                     return;
                 }
 
-                pawn.carryTracker.innerContainer.Remove(carriedAnimal);
                 if (!Densifier.TryInsertAnimal(carriedAnimal))
                 {
-                    GenPlace.TryPlaceThing(carriedAnimal, pawn.PositionHeld, Map, ThingPlaceMode.Near);
+                    pawn.carryTracker.TryDropCarriedThing(pawn.PositionHeld, ThingPlaceMode.Near, out _);
                     EndJobWith(JobCondition.Incompletable);
                 }
             };

@@ -34,7 +34,7 @@ namespace HighDensityAnimals
                 density = 1;
             }
 
-            RecalculateCachedValues();
+            if (Scribe.mode == LoadSaveMode.PostLoadInit) RecalculateCachedValues();
         }
 
         public override void PostSpawnSetup(bool respawningAfterLoad)
@@ -84,7 +84,11 @@ namespace HighDensityAnimals
             }
 
             SyncExistingDensityHediff();
+            (parent as Pawn)?.health?.hediffSet?.DirtyCache();
             ClearMaxNutritionCache();
+            foreach (StatDef stat in new[] { StatDefOf.MeleeDamageFactor, StatDefOf.ArmorRating_Sharp,
+                StatDefOf.ArmorRating_Blunt, StatDefOf.ArmorRating_Heat, StatDefOf.MarketValue })
+                stat.Worker.ClearCacheForThing(parent);
         }
 
         private void EnsureDensityHediff()
@@ -155,7 +159,7 @@ namespace HighDensityAnimals
                 return null;
             }
 
-            return "Density: " + Density + "\nEquivalent to " + Density + " " + pawn.GetKindLabelPlural(Density);
+            return "HDA_AnimalInspection".Translate(Density, pawn.GetKindLabelPlural(Density));
         }
 
         public override float GetStatFactor(StatDef stat)
@@ -166,11 +170,6 @@ namespace HighDensityAnimals
             }
 
             if (stat == StatDefOf.MeatAmount || stat == StatDefOf.LeatherAmount)
-            {
-                return Density;
-            }
-
-            if (HighDensityAnimalsMod.Settings != null && HighDensityAnimalsMod.Settings.scaleMarketValue && stat == StatDefOf.MarketValue)
             {
                 return Density;
             }
@@ -195,7 +194,7 @@ namespace HighDensityAnimals
                 return;
             }
 
-            sb.AppendLine(whitespace + "High density: x" + Density.ToString("0.##"));
+            sb.AppendLine(whitespace + "HDA_Highdensityx".Translate() + Density.ToString("0.##"));
         }
 
         public override IEnumerable<StatDrawEntry> SpecialDisplayStats()
@@ -207,9 +206,9 @@ namespace HighDensityAnimals
 
             yield return new StatDrawEntry(
                 StatCategoryDefOf.BasicsPawn,
-                "Density",
+                "HDA_Density".Translate(),
                 Density.ToString(),
-                "This animal represents multiple fused animals.",
+                "HDA_Thisanimalrepresentsmultiplefusedanimals".Translate(),
                 9990,
                 null,
                 null,
@@ -217,9 +216,9 @@ namespace HighDensityAnimals
 
             yield return new StatDrawEntry(
                 StatCategoryDefOf.AnimalProductivity,
-                "Equivalent animals",
+                "HDA_Equivalentanimals".Translate(),
                 Density.ToString(),
-                "Most outputs are scaled to this many animals' worth of production.",
+                "HDA_Mostoutputsarescaledtothismanyanimalsworthofproduction".Translate(),
                 9990,
                 null,
                 null,

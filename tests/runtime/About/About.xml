@@ -1,0 +1,1 @@
+<ModMetaData><name>High Density Animals regression harness</name><author>Darren</author><packageId>local.hda.regression</packageId><supportedVersions><li>1.7</li></supportedVersions><loadAfter><li>zades.highdensityanimals</li></loadAfter></ModMetaData>

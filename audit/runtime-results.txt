@@ -1,0 +1,59 @@
+RimWorld 1.7.4977
+Assembly /Users/darren/Library/Application Support/Steam/steamapps/common/RimWorld/Mods/HDA-Audit-local/Assemblies/HighDensityAnimals.dll
+CASE startup
+PASS animal comps injected
+PASS health Harmony patch registered
+PASS birth Harmony patch registered
+CASE basic fusion
+PASS insert two eligible animals
+PASS fusion consumes two nutrition
+PASS fusion ejects density-two survivor and consumes secondary
+PASS density scales nutrition capacity
+PASS gizmos and inspection work
+CASE power interruption
+PASS insert two eligible animals
+PASS unpowered machine holds animals
+FAIL power interruption preserves unfinished processing time
+CASE density cap lowered
+PASS insert two eligible animals
+FAIL lower cap never reduces existing survivor density
+FAIL fusion conserves density when cap changes
+CASE deconstruction
+PASS load animal before deconstruction
+FAIL deconstruction safely ejects live animal
+DETAIL animal spawned=False destroyed=False holder=Building_AnimalDensifier
+CASE egg stacking
+PASS dense egg refuses normal stack
+FAIL normal egg refuses dense stack
+FAIL normal egg stack cannot absorb dense embryo
+DETAIL merge=True normalStack=2 normalDensity=1 denseDestroyed=True
+CASE egg laying
+PASS unfertilized egg output scales
+PASS fertilized egg stores dense embryo
+CASE dense hatching
+PASS one density-five chick hatches
+CASE dense mammal birth
+PASS density-three cow gives birth to three calves
+CASE production and combat
+PASS milk amount scales fourfold
+PASS meat yield stat scales fourfold
+PASS leather yield stat scales fourfold
+PASS health scales by square root of density
+PASS melee damage increases
+PASS hunger stage scales fourfold
+CASE real animal hauling job
+PASS real job carries animal into densifier
+DETAIL hauling job=Clean animalSpawned=False holder=Building_AnimalDensifier
+CASE nutrition hauling job
+PASS nutrition workgiver finds job
+PASS nutrition job has nonzero count
+PASS real job delivers nutrition to container
+CASE save active cycle
+PASS insert two eligible animals
+CASE save/load
+PASS two contained animals restored
+PASS contained animal density restored
+PASS contained animal nutrition scaling restored
+PASS active cycle restored
+PASS restored cycle completes
+COMPLETE

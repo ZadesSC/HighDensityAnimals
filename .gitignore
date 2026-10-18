@@ -20,3 +20,7 @@ tmp_tools/
 *.log
 *.tmp
 *~
+
+# Python test caches
+__pycache__/
+*.pyc

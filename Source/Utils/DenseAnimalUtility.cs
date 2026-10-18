@@ -37,7 +37,7 @@ namespace HighDensityAnimals
 
             if (HighDensityAnimalsMod.Settings != null && HighDensityAnimalsMod.Settings.requireAdultsOnly)
             {
-                if (pawn.DevelopmentalStage != DevelopmentalStage.Adult)
+                if (pawn.ageTracker.CurLifeStageIndex < pawn.RaceProps.lifeStageAges.Count - 1)
                 {
                     return false;
                 }
@@ -130,26 +130,25 @@ namespace HighDensityAnimals
             return Mathf.Min(0.5f, Mathf.Log(density, 2f) * 0.04f) * multiplier;
         }
 
-        public static void RefreshAllSpawnedDenseAnimalCaches()
+        public static void RefreshAllDenseAnimalCaches()
         {
-            if (Current.Game == null)
+            if (Current.Game == null) return;
+            HashSet<Pawn> pawns = new HashSet<Pawn>(PawnsFinder.AllMapsWorldAndTemporary_Alive);
+            List<Thing> things = new List<Thing>();
+            foreach (Map map in Find.Maps)
             {
-                return;
-            }
-
-            List<Map> maps = Find.Maps;
-            for (int i = 0; i < maps.Count; i++)
-            {
-                IReadOnlyList<Pawn> pawns = maps[i].mapPawns.AllPawnsSpawned;
-                for (int j = 0; j < pawns.Count; j++)
+                ThingOwnerUtility.GetAllThingsRecursively(map, ThingRequest.ForGroup(ThingRequestGroup.Everything), things);
+                foreach (Thing thing in things)
                 {
-                    CompDenseAnimal comp = GetComp(pawns[j]);
-                    if (comp != null)
-                    {
-                        comp.RecalculateCachedValues();
-                    }
+                    if (thing is Pawn pawn) pawns.Add(pawn);
+                    else if (DenseEggUtility.GetComp(thing) != null) StatDefOf.MarketValue.Worker.ClearCacheForThing(thing);
                 }
             }
+            foreach (Pawn pawn in pawns)
+                if (pawn.inventory != null)
+                    foreach (Thing item in pawn.inventory.innerContainer)
+                        if (DenseEggUtility.GetComp(item) != null) StatDefOf.MarketValue.Worker.ClearCacheForThing(item);
+            foreach (Pawn pawn in pawns) GetComp(pawn)?.RecalculateCachedValues();
         }
 
         public static bool CanBeFused(Pawn pawn)
@@ -224,7 +223,7 @@ namespace HighDensityAnimals
         {
             if (raceDef == null)
             {
-                return "animals";
+                return "HDA_animals".Translate();
             }
 
             string label = count == 1 ? raceDef.label : raceDef.label + "s";
