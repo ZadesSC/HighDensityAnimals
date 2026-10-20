@@ -10,6 +10,7 @@
 - Normal/normal egg stacking; both normal/dense directions; dense/dense rejection; merge attempts; metadata on split.
 - Species, juvenile, target, sex, pregnancy, mental-state, capacity and duplicate-pawn admission.
 - Compatible-pair selection, reservations, unreachable enclosure, forbidden machine and forbidden feedstock.
+- Post-cycle ejection without an eligible partner (absent, wrong sex, juvenile, excessive combined density, or non-colony); retention with a compatible partner.
 - Placement failure injected only in the separate harness; manual ejection retains ownership and removal uses its emergency fallback.
 - Deconstruction, destruction, despawn, off-map destruction, and interrupted carrying.
 - Processing under normal ticks, power loss, automation pause/resume, accepted-cap changes, cancellation/resource conservation and single refund.

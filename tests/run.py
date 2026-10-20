@@ -19,7 +19,7 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 PREPARE_CASES = {
     'package', 'egg_stacks', 'admission', 'pair_selection', 'blocked_ejection', 'lifecycle',
-    'fusion_and_pause', 'cap_and_cancel', 'nutrition', 'production', 'combat', 'offspring', 'natural_offspring', 'rendering', 'settings',
+    'fusion_and_pause', 'post_cycle_partner', 'cap_and_cancel', 'nutrition', 'production', 'combat', 'offspring', 'natural_offspring', 'rendering', 'settings',
     'localization_and_ui', 'reachability', 'negative_controls', 'autonomous_cycles', 'interrupted_haul', 'save_fixture'
 }
 RESUME_CASES = {'fresh_process_reload'}
@@ -133,7 +133,7 @@ def main():
              f'-p:RimWorldDir={game}', f'-p:GameManagedPath={managed}', f'-p:HarmonyAssembly={harmony}']
     subprocess.run(build, check=True)
     mod = results / 'mod'
-    for folder in ['About', 'Defs', 'Languages', '1.7']:
+    for folder in ['About', 'Languages', '1.7']:
         shutil.copytree(ROOT / folder, mod / folder)
     shutil.copy2(ROOT / 'LoadFolders.xml', mod / 'LoadFolders.xml')
     harness = results / 'harness'
@@ -146,7 +146,7 @@ def main():
                 'gameVersion': (game / 'Version.txt').read_text().strip(), 'content': args.content,
                 'harmonyHash': hashlib.sha256(harmony.read_bytes()).hexdigest(),
                 'sourceHashes': {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
-                    for folder in ['Source', 'Defs', 'Languages', 'tests/runtime']
+                    for folder in ['Source', '1.7/Defs', 'Languages', 'tests/runtime']
                     for p in (ROOT / folder).rglob('*') if p.is_file() and not {'bin', 'obj'} & set(p.parts)}}
     (results / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     links = []

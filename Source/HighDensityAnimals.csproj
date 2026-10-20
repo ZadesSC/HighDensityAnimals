@@ -1,14 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <GameVersion Condition="'$(GameVersion)' == ''">1.7</GameVersion>
-    <TargetFramework Condition="'$(GameVersion)' == '1.7'">net10.0</TargetFramework>
-    <TargetFramework Condition="'$(GameVersion)' == '1.6'">net48</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <Version>0.2.0</Version>
     <AssemblyName>HighDensityAnimals</AssemblyName>
-    <OutputPath>../$(GameVersion)/Assemblies/</OutputPath>
+    <OutputPath>../1.7/Assemblies/</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <GenerateDependencyFile>false</GenerateDependencyFile>
     <DebugType>none</DebugType>
@@ -18,20 +16,15 @@
     <GameManagedPath Condition="'$(GameManagedPath)' == '' and Exists('$(RimWorldDir)/RimWorldLinux_Data/Managed/Assembly-CSharp.dll')">$(RimWorldDir)/RimWorldLinux_Data/Managed</GameManagedPath>
   </PropertyGroup>
   <Target Name="ValidateGameReferences" BeforeTargets="ResolveReferences">
-    <Error Condition="!Exists('$(GameManagedPath)/Assembly-CSharp.dll')" Text="Set RimWorldDir or GameManagedPath to the matching RimWorld $(GameVersion) installation." />
+    <Error Condition="!Exists('$(GameManagedPath)/Assembly-CSharp.dll')" Text="Set RimWorldDir or GameManagedPath to the matching RimWorld 1.7 installation." />
     <Error Condition="!Exists('$(HarmonyAssembly)')" Text="Set HarmonyAssembly to the matching Harmony 0Harmony.dll." />
   </Target>
   <ItemGroup>
     <Reference Include="Assembly-CSharp"><HintPath>$(GameManagedPath)/Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="0Harmony"><HintPath>$(HarmonyAssembly)</HintPath><Private>false</Private></Reference>
   </ItemGroup>
-  <ItemGroup Condition="'$(GameVersion)' == '1.7'">
+  <ItemGroup>
     <Reference Include="UnityStubs"><HintPath>$(GameManagedPath)/UnityStubs.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Waylith"><HintPath>$(GameManagedPath)/Waylith.dll</HintPath><Private>false</Private></Reference>
-  </ItemGroup>
-  <ItemGroup Condition="'$(GameVersion)' == '1.6'">
-    <Reference Include="UnityEngine"><HintPath>$(GameManagedPath)/UnityEngine.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameManagedPath)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,43 @@
+name: Build and publish prerelease
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prerelease-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prerelease:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check result validator
+        run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Build and validate package
+        run: python scripts/build_release.py --version "$GITHUB_REF_NAME"
+      - name: Preserve release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: HighDensityAnimals-${{ github.ref_name }}
+          path: dist/*
+          if-no-files-found: error
+      - name: Publish GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME" dist/*.zip dist/SHA256SUMS
+          --verify-tag --title "High Density Animals $GITHUB_REF_NAME"
+          --notes "RimWorld 1.7 only; requires Harmony. Includes compiled assemblies, definitions in 1.7/Defs, shared metadata and translations, and source code. See CHANGELOG.md for changes."
+          --prerelease --generate-notes

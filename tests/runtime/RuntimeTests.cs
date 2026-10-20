@@ -48,7 +48,7 @@ public sealed class RegressionSuite : GameComponent
     public RegressionSuite(Game game) { }
     static readonly string[] Cases = {
         "package", "egg_stacks", "admission", "pair_selection", "blocked_ejection", "lifecycle",
-        "fusion_and_pause", "cap_and_cancel", "nutrition", "production", "combat", "offspring", "natural_offspring", "rendering", "settings",
+        "fusion_and_pause", "post_cycle_partner", "cap_and_cancel", "nutrition", "production", "combat", "offspring", "natural_offspring", "rendering", "settings",
         "localization_and_ui", "reachability", "negative_controls", "autonomous_cycles", "interrupted_haul", "save_fixture"
     };
     void Case(string id, Action test, bool reset = true)
@@ -255,6 +255,30 @@ public sealed class RegressionSuite : GameComponent
             Advance(remaining - 251); Assert(machine.ActiveCycle && !b.Destroyed, "Cycle completed early after resume");
             FinishByNormalTicks(machine); Assert(a.Spawned && DenseAnimalUtility.GetDensity(a) == 2 && b.Destroyed, "Incorrect fusion result");
             Near(machine.StoredNutrition, 4f, "Nutrition was double-charged");
+        });
+        Case("post_cycle_partner", () => {
+            foreach (string scenario in new[] { "none", "compatible", "wrong_sex", "juvenile", "too_dense", "non_colony" }) {
+                ResetFixture();
+                var machine = Machine(4); var a = Animal(); var b = Animal(); Load(machine, a, b);
+                if (scenario != "none") {
+                    var partner = Animal(density: scenario == "too_dense" ? 3 : 1,
+                        sex: scenario == "wrong_sex" ? Gender.Male : Gender.Female,
+                        age: scenario == "juvenile" ? .1f : 5f);
+                    if (scenario == "non_colony") partner.SetFaction(null);
+                }
+                machine.TickRare(); Assert(machine.ActiveCycle, "Cycle did not start: " + scenario);
+                for (int i = 0; i < 12; i++) machine.TickRare();
+                Assert(!machine.ActiveCycle && b.Destroyed && DenseAnimalUtility.GetDensity(a) == 2,
+                    "Incorrect completed fusion: " + scenario);
+                Near(machine.StoredNutrition, 4f, "Incorrect post-cycle nutrition: " + scenario);
+                if (scenario == "compatible")
+                    Assert(!a.Spawned && a.ParentHolder == machine, "Ejected animal with viable partner");
+                else {
+                    Assert(a.Spawned && !a.Destroyed && !machine.GetDirectlyHeldThings().Contains(a),
+                        "Stranded animal without viable partner: " + scenario);
+                    Assert(machine.FindNextAnimal(Worker()) == null, "Ejected animal selected without compatible pair: " + scenario);
+                }
+            }
         });
         Case("cap_and_cancel", () => {
             var machine = Machine(10); var a = Animal(density: 3); var b = Animal(density: 3); Load(machine, a, b, 160);
@@ -536,7 +560,9 @@ public sealed class RegressionSuite : GameComponent
             int remaining = machine.CycleTicksRemaining; Advance(1000); Assert(machine.CycleTicksRemaining == remaining, "Paused save advanced after reload");
             Automation(machine).toggleAction(); machine.GetComp<CompPowerTrader>().PowerOn = true;
             Advance(remaining - 251); Assert(machine.ActiveCycle, "Restored cycle completed early");
-            FinishByNormalTicks(machine); Assert(machine.CurrentDensity == 4 && animals[1].Destroyed, "Restored cycle result incorrect");
+            FinishByNormalTicks(machine);
+            Assert(DenseAnimalUtility.GetDensity(animals[0]) == 4 && !animals[0].Destroyed && animals[1].Destroyed &&
+                (animals[0].Spawned || animals[0].ParentHolder == machine), "Restored cycle result incorrect");
             Near(machine.StoredNutrition, snapshot.GetProperty("nutrition").GetSingle(), "Restored cycle charged twice");
         }, false);
         RegressionMod.Write(new { type = "complete" });

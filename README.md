@@ -1,13 +1,13 @@
 # High Density Animals
 
-A RimWorld 1.6 and 1.7 mod that fuses compatible colony animals into denser livestock. Requires Harmony. No official expansion is required.
+A RimWorld 1.7 mod that fuses compatible colony animals into denser livestock. Requires Harmony. No official expansion is required.
 
 ## Play
 
 1. Install Harmony and this mod; enable Harmony before High Density Animals.
 2. Research Electricity and build an **animal densifier** under Production.
 3. Connect power, choose a species present in your colony, set a target density, and enable Hauling work for a colonist.
-4. Use the Storage tab to choose feedstock. The machine loads a compatible pair and nutrition automatically, then retains the survivor for further cycles until the target is reached.
+4. Use the Storage tab to choose feedstock. The machine loads a compatible pair and nutrition automatically, then retains the survivor for further cycles until the target is reached or no eligible partner is available. It then ejects the survivor.
 
 By default, animals must be adults, the same species and sex, healthy enough to walk, and not pregnant or in a mental state. The oldest animal in a feasible pair becomes the primary survivor: its identity, injuries, bonds, training, and age are retained. The secondary animal is permanently consumed. Avoid fusing valued bonded animals unless you intend to lose the secondary's identity. Animals and feedstock inside the machine are in stasis.
 
@@ -36,7 +36,7 @@ dotnet build Source/HighDensityAnimals.csproj -c Release \
   -p:HarmonyAssembly="/path/to/Harmony/1.7/Assemblies/0Harmony.dll"
 ```
 
-`GameManagedPath` can be supplied instead of `RimWorldDir`. The project detects macOS, Windows, and Linux managed-folder layouts; the 1.7 build and game tests in this workspace use macOS. To build for 1.6, add `-p:GameVersion=1.6` and supply matching RimWorld 1.6 and Harmony references. Build output goes to the selected version's `Assemblies` folder. `LoadFolders.xml` selects only the matching DLL alongside the shared content. Game references are not redistributed. The automated gameplay regression suite currently targets 1.7.
+`GameManagedPath` can be supplied instead of `RimWorldDir`. The project detects macOS, Windows, and Linux managed-folder layouts; the build and game tests in this workspace use macOS. Build output goes to `1.7/Assemblies`. Definitions live in `1.7/Defs`; `LoadFolders.xml` loads that version folder alongside shared content. Game references are not redistributed.
 
 ## Test
 
@@ -60,7 +60,9 @@ See [tests/README.md](tests/README.md) for coverage and limitations, and [record
 
 ## Release and removal
 
-Distribute About, Defs, Languages, LoadFolders.xml, the built 1.6 and 1.7 folders, README, LICENSE and CHANGELOG. Keep test/audit/scratch files out of the mod package. Test the packaged copy through the same clean profiles before publishing.
+Distribute `1.7` (containing `Assemblies` and `Defs`), `About`, `Languages`, `Source`, `LoadFolders.xml`, README, LICENSE and CHANGELOG. Keep build intermediates and test/audit/scratch files out of the mod package. Test the packaged copy through the same clean profiles before publishing.
+
+Push a `v*` tag to run the GitHub Actions prerelease workflow. It builds the 1.7 DLL against pinned NuGet reference assemblies, validates and archives the package, and publishes the ZIP and SHA-256 checksum as a GitHub prerelease. The same build/package step can be run locally with `python3 scripts/build_release.py --version v0.2.0-pre.1`.
 
 Before disabling the mod in an existing save, eject every machine and remove/downgrade density-specific animals and eggs using an appropriate save migration. There is currently no automatic uninstall migration: removing the mod loses density metadata and removes its buildings. Keep a backup when changing mods.
 

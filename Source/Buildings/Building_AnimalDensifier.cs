@@ -533,7 +533,8 @@ namespace HighDensityAnimals
             innerContainer.Remove(consumed);
             consumed.Destroy(DestroyMode.Vanish);
             ClearCycle();
-            if (CurrentDensity >= targetDensity || CurrentDensity >= GetMaxDensity()) EjectPrimary();
+            if (CurrentDensity >= targetDensity || CurrentDensity >= GetMaxDensity() || FindNextAnimal(null) == null)
+                EjectPrimary();
         }
 
         private void ClearCycle()

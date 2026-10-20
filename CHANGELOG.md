@@ -2,6 +2,8 @@
 
 ## 0.2.0
 
+- Target RimWorld 1.7 only, move definitions into `1.7/Defs`, and publish source-inclusive prerelease packages through GitHub Actions.
+- Eject the surviving animal after fusion when no eligible partner remains for another cycle.
 - Rebuild the 1.6 assembly and explicitly select version-specific load folders, fixing the missing densifier storage tab on 1.6.
 - Build and package for RimWorld 1.7 with configurable references; remove official expansion requirements.
 - Preserve contained animals on removal and retain contents when placement fails.
