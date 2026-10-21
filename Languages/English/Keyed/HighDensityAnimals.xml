@@ -42,6 +42,9 @@
   <HDA_Scalehealthbydensity>Scale health by density</HDA_Scalehealthbydensity>
   <HDA_Scalemarketvaluebydensity>Scale market value by density</HDA_Scalemarketvaluebydensity>
   <HDA_Scalevisualsizebydensity>Scale visual size by density</HDA_Scalevisualsizebydensity>
+  <HDA_VisualScalingCurrent>Visual scaling: current (gradual, capped) — click to switch</HDA_VisualScalingCurrent>
+  <HDA_VisualScalingLinear>Visual scaling: linear (density = size multiplier) — click to switch</HDA_VisualScalingLinear>
+  <HDA_VisualScalingLinearExplanation>Linear scaling has no visual size cap: density 10 gives 10× width and length.</HDA_VisualScalingLinearExplanation>
   <HDA_Secondary xml:space="preserve">Secondary: </HDA_Secondary>
   <HDA_SetSpecies>Set Species</HDA_SetSpecies>
   <HDA_State xml:space="preserve">State: </HDA_State>
