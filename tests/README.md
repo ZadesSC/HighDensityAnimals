@@ -10,6 +10,7 @@
 - Normal/normal egg stacking; both normal/dense directions; dense/dense rejection; merge attempts; metadata on split.
 - Species, juvenile, target, sex, pregnancy, mental-state, capacity and duplicate-pawn admission.
 - Compatible-pair selection, reservations, unreachable enclosure, forbidden machine and forbidden feedstock.
+- Per-machine Both/female/male filters through direct insertion and normal colonist Hauling work; live dropdown actions, updated labels, loaded/active locks, stale menu callbacks, genderless handling, mandatory same-sex pairing without settings, filter persistence, and refund/ejection of paused mixed-sex cycles on reload.
 - Post-cycle ejection without an eligible partner (absent, wrong sex, juvenile, excessive combined density, or non-colony); retention with a compatible partner.
 - Density waste protection defaults, protected/unprotected hauling and loading, re-enabling with loaded inputs, target/global output caps, exact-limit fusion, full input nutrition cost, disabled active-cycle control, and fresh-process restoration of overflowing cycles and toggle state.
 - Placement failure injected only in the separate harness; manual ejection retains ownership and removal uses its emergency fallback.

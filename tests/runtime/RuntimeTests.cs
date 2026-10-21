@@ -47,7 +47,7 @@ public sealed class RegressionSuite : GameComponent
         Assert(Math.Abs(actual - expected) <= tolerance, message + $": expected {expected}, got {actual}");
     public RegressionSuite(Game game) { }
     static readonly string[] Cases = {
-        "package", "egg_stacks", "admission", "pair_selection", "blocked_ejection", "lifecycle",
+        "package", "egg_stacks", "admission", "pair_selection", "sex_filter", "sex_filter_ui", "same_sex", "sex_filter_hauling", "blocked_ejection", "lifecycle",
         "fusion_and_pause", "post_cycle_partner", "density_waste", "cap_and_cancel", "nutrition", "production", "combat", "offspring", "natural_offspring", "rendering", "settings",
         "localization_and_ui", "reachability", "negative_controls", "autonomous_cycles", "interrupted_haul", "save_fixture"
     };
@@ -140,6 +140,16 @@ public sealed class RegressionSuite : GameComponent
         .Single(c => c.defaultLabel == "HDA_Automation".Translate().ToString());
     static Command_Toggle WasteProtection(Building_AnimalDensifier machine) => machine.GetGizmos().OfType<Command_Toggle>()
         .Single(c => c.defaultLabel == "HDA_PreventDensityWaste".Translate().ToString());
+    static Command_Action SexCommand(Building_AnimalDensifier machine) => machine.GetGizmos().OfType<Command_Action>()
+        .Single(c => c.defaultDesc == "HDA_DensifySexDescription".Translate().ToString());
+    static List<FloatMenuOption> SexMenu(Building_AnimalDensifier machine)
+    {
+        SexCommand(machine).action();
+        var menu = Find.WindowStack.Windows.OfType<FloatMenu>().Single();
+        var options = ((List<FloatMenuOption>)AccessTools.Field(typeof(FloatMenu), "options").GetValue(menu)).ToList();
+        menu.Close(false);
+        return options;
+    }
     void Advance(int ticks) { for (int i = 0; i < ticks; i++) Find.TickManager.DoSingleTick(); }
     void FinishByNormalTicks(Building_AnimalDensifier machine)
     {
@@ -223,6 +233,83 @@ public sealed class RegressionSuite : GameComponent
             Assert(machine.FindNextAnimal(worker) == null, "Reserved animal selected");
             worker.Map.reservationManager.ReleaseAllForTarget(maleA);
             Assert(machine.FindNextAnimal(worker) != null, "Eligible pair not found after reservation release");
+        });
+        Case("sex_filter", () => {
+            var machine = Machine(); var female = Animal(); var male = Animal(sex: Gender.Male);
+            var genderless = Animal(); genderless.gender = Gender.None;
+            Assert(machine.SexFilter == DensifierSexFilter.Both, "New machine did not default to Both");
+            Assert(machine.AcceptsAnimal(female) && machine.AcceptsAnimal(male) && machine.AcceptsAnimal(genderless), "Both excluded an eligible sex");
+            Assert(machine.TrySetSexFilter(DensifierSexFilter.FemalesOnly), "Cannot select females");
+            Assert(machine.AcceptsAnimal(female) && !machine.AcceptsAnimal(male) && !machine.AcceptsAnimal(genderless), "Female filter admitted wrong sex");
+            Assert(!machine.TryInsertAnimal(male), "Direct insertion bypassed female filter");
+            Assert(machine.TrySetSexFilter(DensifierSexFilter.MalesOnly), "Cannot select males");
+            Assert(machine.AcceptsAnimal(male) && !machine.AcceptsAnimal(female) && !machine.AcceptsAnimal(genderless), "Male filter admitted wrong sex");
+            Assert(!machine.TryInsertAnimal(female), "Direct insertion bypassed male filter");
+            Assert(!machine.TrySetSexFilter((DensifierSexFilter)999), "Invalid sex filter accepted");
+            Assert(machine.TryInsertAnimal(male), "Matching male rejected");
+            Assert(SexCommand(machine).Disabled && !machine.TrySetSexFilter(DensifierSexFilter.Both), "Loaded filter can change");
+            machine.EjectAll();
+            var food = ThingMaker.MakeThing(ThingDefOf.RawPotatoes); food.stackCount = 10;
+            machine.GetDirectlyHeldThings().TryAdd(food);
+            Assert(!SexCommand(machine).Disabled && machine.TrySetSexFilter(DensifierSexFilter.FemalesOnly), "Food-only machine locked filter");
+            Load(machine, female, Animal(), 80); machine.TickRare();
+            Assert(machine.ActiveCycle && SexCommand(machine).Disabled && !machine.TrySetSexFilter(DensifierSexFilter.Both), "Active filter can change");
+        });
+        Case("sex_filter_ui", () => {
+            var machine = Machine();
+            Assert(SexCommand(machine).defaultLabel == "HDA_DensifySex".Translate("HDA_DensifyBoth".Translate()).ToString(), "Wrong initial label");
+            Assert(SexCommand(machine).icon != null && SexCommand(machine).icon != BaseContent.BadTex, "Missing filter icon");
+            var choices = new[] { (DensifierSexFilter.Both, "HDA_DensifyBoth"), (DensifierSexFilter.FemalesOnly, "HDA_DensifyFemalesOnly"), (DensifierSexFilter.MalesOnly, "HDA_DensifyMalesOnly") };
+            foreach (var choice in choices) {
+                var options = SexMenu(machine);
+                Assert(options.Count == 3 && choices.All(c => options.Any(o => o.Label == c.Item2.Translate().ToString())), "Dropdown missing choices");
+                options.Single(o => o.Label == choice.Item2.Translate().ToString()).action();
+                Assert(machine.SexFilter == choice.Item1, "Dropdown selection did not apply");
+                Assert(SexCommand(machine).defaultLabel == "HDA_DensifySex".Translate(choice.Item2.Translate()).ToString(), "Gizmo label did not update");
+                Assert(machine.GetInspectString().Contains(SexCommand(machine).defaultLabel), "Inspection omitted current filter");
+            }
+            var staleOptions = SexMenu(machine);
+            Assert(machine.TryInsertAnimal(Animal(sex: Gender.Male)), "Load before stale menu selection");
+            staleOptions.Single(o => o.Label == "HDA_DensifyFemalesOnly".Translate().ToString()).action();
+            Assert(machine.SexFilter == DensifierSexFilter.MalesOnly, "Stale menu changed a loaded machine");
+        });
+        Case("same_sex", () => {
+            Assert(AccessTools.Field(typeof(HighDensityAnimalsSettings), "requireSameSex") == null, "Removed setting still exists");
+            var female = Animal(age: 10f); var male = Animal(sex: Gender.Male); var male2 = Animal(sex: Gender.Male);
+            HighDensityAnimalsMod.Settings = null;
+            Assert(!DenseAnimalUtility.CanFuseTogether(female, male) && DenseAnimalUtility.CanFuseTogether(male, male2), "Same-sex rule depends on mod settings");
+            HighDensityAnimalsMod.Settings = new HighDensityAnimalsSettings();
+            var pair = DenseAnimalUtility.FindFusionCandidates(Map, female.def, 2);
+            Assert(pair != null && pair.All(p => p.gender == Gender.Male), "Utility selected a mixed pair or stranded a valid pair");
+            var machine = Machine(4); var a = Animal(); var b = Animal(); Load(machine, a, b); machine.TickRare();
+            float charged = machine.StoredNutrition;
+            b.gender = Gender.Male; // Simulate a legacy mixed-sex cycle without restoring the removed toggle.
+            FinishByNormalTicks(machine);
+            Assert(!a.Destroyed && !b.Destroyed && machine.GetDirectlyHeldThings().Contains(a) && machine.GetDirectlyHeldThings().Contains(b), "Mixed cycle consumed or lost animals");
+            Near(machine.StoredNutrition, charged + 2f, "Mixed cycle did not refund exactly once");
+            Advance(500); Near(machine.StoredNutrition, charged + 2f, "Mixed cycle refunded repeatedly");
+            Assert(!machine.ActiveCycle, "Mixed pair restarted");
+            machine.EjectAll(); Assert(a.Spawned && b.Spawned, "Cannot eject rejected mixed pair");
+            var noneA = Animal(); var noneB = Animal(); noneA.gender = noneB.gender = Gender.None;
+            Assert(DenseAnimalUtility.CanFuseTogether(noneA, noneB) && !DenseAnimalUtility.CanFuseTogether(noneA, male), "Incorrect genderless pair compatibility");
+        });
+        Case("sex_filter_hauling", () => {
+            var machine = Machine(); var worker = Worker(); var loneMale = Animal(sex: Gender.Male, age: 10f);
+            var a = Animal(); var b = Animal();
+            Assert(machine.FindNextAnimal(worker)?.gender == Gender.Female, "Both chose a lone older male instead of female pair");
+            machine.TrySetSexFilter(DensifierSexFilter.MalesOnly);
+            Assert(machine.FindNextAnimal(worker) == null, "Male-only machine chose females or a lone male");
+            machine.TrySetSexFilter(DensifierSexFilter.FemalesOnly);
+            Food(160); worker.jobs.EndCurrentJob(JobCondition.InterruptForced);
+            for (int i = 0; i < 14000 && !new[] { a, b }.Any(p => p.Spawned && DenseAnimalUtility.GetDensity(p) == 2); i++) Find.TickManager.DoSingleTick();
+            Assert(new[] { a, b }.Count(p => p.Destroyed) == 1 && new[] { a, b }.Any(p => p.Spawned && DenseAnimalUtility.GetDensity(p) == 2),
+                "Normal Hauling work did not fuse the selected females: " + machine.GetInspectString());
+            Assert(loneMale.Spawned && !loneMale.Destroyed && DenseAnimalUtility.GetDensity(loneMale) == 1, "Female-only hauling consumed male");
+            machine.TrySetSexFilter(DensifierSexFilter.MalesOnly); var maleB = Animal(sex: Gender.Male);
+            Food(160);
+            for (int i = 0; i < 14000 && !new[] { loneMale, maleB }.Any(p => p.Spawned && DenseAnimalUtility.GetDensity(p) == 2); i++) Find.TickManager.DoSingleTick();
+            Assert(new[] { loneMale, maleB }.Count(p => p.Destroyed) == 1 && new[] { loneMale, maleB }.Any(p => p.Spawned && DenseAnimalUtility.GetDensity(p) == 2),
+                "Normal Hauling work did not fuse selected males: " + machine.GetInspectString());
         });
         Case("blocked_ejection", () => {
             var machine = Machine(); var pawn = Animal(); Assert(machine.TryInsertAnimal(pawn), "Insert animal");
@@ -515,7 +602,8 @@ public sealed class RegressionSuite : GameComponent
             Assert(new[] { a }.All(p => !p.Destroyed && (p.Spawned || p.ParentHolder is Pawn_CarryTracker)), "Interruption lost animal");
         });
         Case("save_fixture", () => {
-            var machine = Machine(17); var a = Animal(density: 3); var b = Animal(); Load(machine, a, b);
+            var machine = Machine(17); machine.TrySetSexFilter(DensifierSexFilter.FemalesOnly);
+            var a = Animal(density: 3); var b = Animal(); Load(machine, a, b);
             machine.GetStoreSettings().filter.SetAllow(ThingDefOf.RawPotatoes, false);
             machine.TickRare(); Advance(500); Automation(machine).toggleAction();
             Assert(machine.ActiveCycle && machine.CycleTicksRemaining > 0, "Save fixture has no active cycle");
@@ -523,19 +611,24 @@ public sealed class RegressionSuite : GameComponent
             GenSpawn.Spawn(egg, Map.Center + new IntVec3(8, 0, 8), Map);
             var variants = new List<object>();
             object Snapshot(string state, Building_AnimalDensifier holder) => new {
-                state, machine = holder.thingIDNumber, density = holder.CurrentDensity, nutrition = holder.StoredNutrition,
+                state, machine = holder.thingIDNumber, density = holder.CurrentDensity, nutrition = holder.StoredNutrition, sexFilter = (int)holder.SexFilter,
                 remaining = holder.CycleTicksRemaining, automation = holder.AutomationEnabled, protection = holder.PreventDensityWaste,
                 pawns = holder.GetDirectlyHeldThings().OfType<Pawn>().Select(p => p.thingIDNumber).ToArray()
             };
             var empty = Machine(offset: new IntVec3(-16, 0, 0)); variants.Add(Snapshot("empty", empty));
-            var single = Machine(4, offset: new IntVec3(-8, 0, 0)); single.TryInsertAnimal(Animal()); variants.Add(Snapshot("one_animal", single));
+            var single = Machine(4, offset: new IntVec3(-8, 0, 0)); single.TrySetSexFilter(DensifierSexFilter.MalesOnly);
+            single.TryInsertAnimal(Animal(sex: Gender.Male)); variants.Add(Snapshot("one_animal", single));
             var waiting = Machine(4, offset: new IntVec3(8, 0, 0)); Load(waiting, Animal(), Animal(), 0); variants.Add(Snapshot("waiting_for_food", waiting));
             var foodOnly = Machine(offset: new IntVec3(16, 0, 0)); var raw = ThingMaker.MakeThing(ThingDefOf.RawPotatoes); raw.stackCount = 7;
+            foodOnly.TrySetSexFilter(DensifierSexFilter.FemalesOnly);
             foodOnly.GetDirectlyHeldThings().TryAdd(raw); variants.Add(Snapshot("food_only", foodOnly));
             var powered = Machine(5, offset: new IntVec3(0, 0, 8)); Load(powered, Animal(), Animal()); powered.TickRare(); variants.Add(Snapshot("powered_cycle", powered));
             var overflow = Machine(5, offset: new IntVec3(0, 0, -8)); WasteProtection(overflow).toggleAction();
             Load(overflow, Animal(density: 3), Animal(density: 3), 160); overflow.TickRare(); Automation(overflow).toggleAction();
             Assert(overflow.ActiveCycle, "Overflow save fixture did not start"); variants.Add(Snapshot("overflow_cycle", overflow));
+            var mixed = Machine(4, offset: new IntVec3(0, 0, 16)); var mixedA = Animal(); var mixedB = Animal();
+            Load(mixed, mixedA, mixedB); mixed.TickRare(); mixedB.gender = Gender.Male; Automation(mixed).toggleAction();
+            Assert(mixed.ActiveCycle, "Mixed save fixture did not start"); variants.Add(Snapshot("mixed_cycle", mixed));
             RegressionMod.Write(new { type = "snapshot", machine = machine.thingIDNumber, primary = a.thingIDNumber, secondary = b.thingIDNumber,
                 remaining = machine.CycleTicksRemaining, nutrition = machine.StoredNutrition, egg = egg.thingIDNumber, variants });
             GameDataSaveLoader.SaveGame("HdaRegression");
@@ -582,6 +675,18 @@ public sealed class RegressionSuite : GameComponent
             var machine = Map.listerThings.AllThings.OfType<Building_AnimalDensifier>().Single(b => b.thingIDNumber == snapshot.GetProperty("machine").GetInt32());
             foreach (var variant in snapshot.GetProperty("variants").EnumerateArray()) {
                 var holder = Map.listerThings.AllThings.OfType<Building_AnimalDensifier>().Single(b => b.thingIDNumber == variant.GetProperty("machine").GetInt32());
+                Assert((int)holder.SexFilter == variant.GetProperty("sexFilter").GetInt32(), "Sex filter not restored");
+                if (variant.GetProperty("state").GetString() == "mixed_cycle") {
+                    Assert(!holder.ActiveCycle, "Paused legacy mixed-sex cycle was not cancelled on load");
+                    Near(holder.StoredNutrition, variant.GetProperty("nutrition").GetSingle() + 2f, "Mixed-sex reload did not refund once");
+                    var inputs = holder.GetDirectlyHeldThings().OfType<Pawn>().ToList();
+                    Assert(inputs.Count == 2 && inputs.Select(p => p.thingIDNumber).SequenceEqual(variant.GetProperty("pawns").EnumerateArray().Select(e => e.GetInt32())), "Mixed-sex reload lost animals");
+                    float convertedNutrition = (float)AccessTools.Field(typeof(Building_AnimalDensifier), "storedNutrition").GetValue(holder);
+                    holder.EjectAll(); Assert(inputs.All(p => p.Spawned && !p.Destroyed), "Reloaded mixed animals cannot be ejected");
+                    Near(holder.StoredNutrition, convertedNutrition, "Mixed-sex ejection refunded twice");
+                    holder.EjectAll(); Near(holder.StoredNutrition, convertedNutrition, "Repeated ejection refunded twice");
+                    continue;
+                }
                 Assert(holder.CurrentDensity == variant.GetProperty("density").GetInt32() && holder.CycleTicksRemaining == variant.GetProperty("remaining").GetInt32(), "Variant density/timer not restored: " + variant.GetProperty("state"));
                 Assert(holder.AutomationEnabled == variant.GetProperty("automation").GetBoolean(), "Variant automation not restored");
                 Assert(holder.PreventDensityWaste == variant.GetProperty("protection").GetBoolean(), "Density waste protection not restored");
@@ -597,6 +702,7 @@ public sealed class RegressionSuite : GameComponent
                 }
             }
             Assert(machine.SelectedSpecies == ThingDef.Named("Cow") && machine.TargetDensity == 17 && !machine.AutomationEnabled, "Configuration not restored");
+            Assert(machine.SexFilter == DensifierSexFilter.FemalesOnly, "Active cycle sex filter not restored");
             Assert(!machine.GetStoreSettings().filter.Allows(ThingDefOf.RawPotatoes), "Storage filter not restored");
             var animals = machine.GetDirectlyHeldThings().OfType<Pawn>().ToList();
             Assert(animals.Count == 2 && animals[0].thingIDNumber == snapshot.GetProperty("primary").GetInt32() && animals[1].thingIDNumber == snapshot.GetProperty("secondary").GetInt32(), "Pawn identities not restored");

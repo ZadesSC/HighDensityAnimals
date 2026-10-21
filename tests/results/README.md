@@ -1,8 +1,12 @@
 # Recorded verification
 
+The per-machine sex filter and mandatory same-sex fusion are verified in [densifier-sex-filter/README.md](densifier-sex-filter/README.md).
+
+## Earlier baseline
+
 RimWorld 1.7.4977 rev1248, macOS, French game language. The newly built 0.2.0 DLL passed **46 runtime cases**: 21 regression cases, fresh-process reload, and legacy-save migration in each of Core-only and full official DLC profiles. All 12 Python result-validator tests also passed. Builds completed with no warnings or errors.
 
-The JSONL files preserve per-case results. `summary.json` records the tested DLL SHA-256, source hashes, and benchmark medians. Original complete logs and disposable saves remain in ignored `tmp_tools/test-runs/20261014-151818-5a759de5/`. The current DLL hash matches the recorded regression and benchmark artifacts.
+The JSONL files preserve per-case results. `summary.json` records the baseline DLL SHA-256, source hashes, and benchmark medians. Original complete logs and disposable saves remain in ignored `tmp_tools/test-runs/20261014-151818-5a759de5/`. These artifacts describe the earlier build, rather than the current DLL.
 
 ## Synthetic benchmark
 

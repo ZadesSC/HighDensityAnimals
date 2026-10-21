@@ -40,7 +40,6 @@ namespace HighDensityAnimals
             listing.Begin(inRect);
             listing.Label("HDA_Thedensifierfusesanimalstwoatatimeuntiltheconfiguredtargetdensityisrea".Translate());
             listing.GapLine();
-            listing.CheckboxLabeled("HDA_Requiresamesexforfusion".Translate(), ref Settings.requireSameSex);
             listing.CheckboxLabeled("HDA_Requireadultsonly".Translate(), ref Settings.requireAdultsOnly);
             listing.CheckboxLabeled("HDA_Scalehealthbydensity".Translate(), ref Settings.scaleHealth);
             listing.CheckboxLabeled("HDA_Scalecombatstatsbydensity".Translate(), ref Settings.scaleCombatStats);

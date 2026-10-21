@@ -168,7 +168,7 @@ namespace HighDensityAnimals
                 return false;
             }
 
-            if (HighDensityAnimalsMod.Settings != null && HighDensityAnimalsMod.Settings.requireSameSex && first.gender != second.gender)
+            if (first.gender != second.gender)
             {
                 return false;
             }
@@ -183,16 +183,7 @@ namespace HighDensityAnimals
                 return null;
             }
 
-            IEnumerable<Pawn> candidates = map.mapPawns.AllPawnsSpawned.Where(p => p.def == raceDef && CanBeFused(p));
-            if (HighDensityAnimalsMod.Settings != null && HighDensityAnimalsMod.Settings.requireSameSex)
-            {
-                candidates = candidates
-                    .GroupBy(p => p.gender)
-                    .OrderByDescending(group => group.Count())
-                    .SelectMany(group => group);
-            }
-
-            List<Pawn> ordered = candidates
+            List<Pawn> ordered = map.mapPawns.AllPawnsSpawned.Where(p => p.def == raceDef && CanBeFused(p))
                 .OrderByDescending(p => p.ageTracker.AgeBiologicalYearsFloat)
                 .ToList();
 
@@ -201,9 +192,12 @@ namespace HighDensityAnimals
                 return null;
             }
 
-            Pawn seed = ordered[0];
-            List<Pawn> selection = ordered.Where(p => CanFuseTogether(seed, p)).Take(requiredCount).ToList();
-            return selection.Count >= requiredCount ? selection : null;
+            foreach (Pawn seed in ordered)
+            {
+                List<Pawn> selection = ordered.Where(p => CanFuseTogether(seed, p)).Take(requiredCount).ToList();
+                if (selection.Count == requiredCount) return selection;
+            }
+            return null;
         }
 
         public static Pawn ChoosePrimaryPawn(IEnumerable<Pawn> pawns)

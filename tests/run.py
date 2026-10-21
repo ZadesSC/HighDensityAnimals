@@ -18,7 +18,7 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 PREPARE_CASES = {
-    'package', 'egg_stacks', 'admission', 'pair_selection', 'blocked_ejection', 'lifecycle',
+    'package', 'egg_stacks', 'admission', 'pair_selection', 'sex_filter', 'sex_filter_ui', 'same_sex', 'sex_filter_hauling', 'blocked_ejection', 'lifecycle',
     'fusion_and_pause', 'post_cycle_partner', 'density_waste', 'cap_and_cancel', 'nutrition', 'production', 'combat', 'offspring', 'natural_offspring', 'rendering', 'settings',
     'localization_and_ui', 'reachability', 'negative_controls', 'autonomous_cycles', 'interrupted_haul', 'save_fixture'
 }

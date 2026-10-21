@@ -2,6 +2,7 @@
 
 ## 0.2.0
 
+- Add a per-machine Densify dropdown for Both (default), Females only, or Males only; always require same-sex fusion and safely cancel/refund legacy mixed-sex cycles.
 - Add a per-machine Prevent density waste gizmo, enabled by default; disabling it allows overflowing fusion pairs with capped output and full input nutrition cost.
 - Target RimWorld 1.7 only, move definitions into `1.7/Defs`, and publish source-inclusive prerelease packages through GitHub Actions.
 - Eject the surviving animal after fusion when no eligible partner remains for another cycle.
