@@ -2,7 +2,6 @@
 
 ## 0.2.0
 
-- Add a mod-options button to switch immediately between the existing capped visual scaling and uncapped linear scaling (density 10 = 10× width and length).
 - Target RimWorld 1.7 only, move definitions into `1.7/Defs`, and publish source-inclusive prerelease packages through GitHub Actions.
 - Eject the surviving animal after fusion when no eligible partner remains for another cycle.
 - Rebuild the 1.6 assembly and explicitly select version-specific load folders, fixing the missing densifier storage tab on 1.6.

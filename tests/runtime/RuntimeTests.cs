@@ -395,22 +395,9 @@ public sealed class RegressionSuite : GameComponent
             var scale = new Vector3(2f, 3f, 4f); var renderer = new PawnRenderSubWorker_DenseAnimalScale();
             renderer.TransformScale(null, new PawnDrawParms { pawn = pawn }, ref scale);
             Near(scale.x, 2.2f, "Rendered width exceeds cap"); Near(scale.z, 4.4f, "Rendered length exceeds cap"); Near(scale.y, 3f, "Renderer changed depth axis");
-            pawn.GetComp<CompDenseAnimal>().SetDensity(10);
-            HighDensityAnimalsMod.Settings.linearVisualScaling = true; DenseAnimalUtility.RefreshAllDenseAnimalCaches();
-            Near(pawn.GetComp<CompDenseAnimal>().CachedVisualScaleFactor, 10f, "Linear scaling did not bypass visual cap");
-            scale = new Vector3(2f, 3f, 4f);
-            renderer.TransformScale(null, new PawnDrawParms { pawn = pawn }, ref scale);
-            Near(scale.x, 20f, "Density 10 did not render at 10x width"); Near(scale.z, 40f, "Density 10 did not render at 10x length");
-            Near(scale.y, 3f, "Linear scaling changed depth axis");
-            Near(DenseAnimalUtility.VisualScaleFactor(1), 1f, "Linear scaling changed normal animals");
             HighDensityAnimalsMod.Settings.scaleVisualSize = false; scale = new Vector3(2f, 3f, 4f);
             renderer.TransformScale(null, new PawnDrawParms { pawn = pawn }, ref scale);
             Near(scale.x, 2f, "Disabled visual scaling still transforms mesh"); Near(scale.z, 4f, "Disabled visual scaling still transforms mesh");
-            HighDensityAnimalsMod.Settings.scaleVisualSize = true;
-            HighDensityAnimalsMod.Settings.linearVisualScaling = false; DenseAnimalUtility.RefreshAllDenseAnimalCaches();
-            scale = new Vector3(2f, 3f, 4f);
-            renderer.TransformScale(null, new PawnDrawParms { pawn = pawn }, ref scale);
-            Near(scale.x, 2.2f, "Switching back did not restore capped width"); Near(scale.z, 4.4f, "Switching back did not restore capped length");
         });
         Case("settings", () => {
             var machine = Machine(10); var pawn = Animal(density: 4); machine.TryInsertAnimal(pawn);
