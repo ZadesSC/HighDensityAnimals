@@ -115,6 +115,11 @@ namespace HighDensityAnimals
                 return 1f;
             }
 
+            if (HighDensityAnimalsMod.Settings?.linearVisualScaling == true)
+            {
+                return density;
+            }
+
             float maxScale = HighDensityAnimalsMod.Settings?.maxVisualScale ?? 1.75f;
             return Mathf.Min(maxScale, 1f + Mathf.Log(density, 2f) * 0.1f);
         }
