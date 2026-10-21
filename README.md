@@ -24,7 +24,7 @@ Changing the global cap never reduces an existing animal's density. A cycle alre
 - Health scales by the square root of density. Melee damage and armor increase more slowly. Settings can disable health/combat scaling.
 - Visual size increases slowly, subject to the configured maximum. Market value scales linearly when enabled.
 - A fertilized egg stores a dense embryo and hatches into one dense offspring. Dense eggs never stack or serve as densifier feedstock.
-- Mammals produce density times as many normal offspring, retaining the original breeding behavior. This can increase pawn count; it is not a population cap.
+- Live births retain the species' normal litter size. Each newborn inherits the average of the mother's and father's densities, rounded down; an unknown father counts as density 1. Parent densities are read at birth, including for existing pregnancies. For example, density 5 and 2 parents produce density 3 offspring, and a cow still produces one calf.
 
 Current defaults allow density up to 25 and visual scale up to 1.75. These are initial balance choices, not a measured recommendation for every colony.
 

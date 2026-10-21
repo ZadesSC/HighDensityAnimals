@@ -56,6 +56,12 @@ namespace HighDensityAnimals
             return GetDensity(pawn) > 1;
         }
 
+        public static int GetOffspringDensity(Pawn mother, Pawn father)
+        {
+            // Widen before adding: existing densities can exceed the configured cap.
+            return (int)(((long)GetDensity(mother) + GetDensity(father)) / 2);
+        }
+
         public static CompDenseAnimal GetComp(Pawn pawn)
         {
             return pawn?.GetComp<CompDenseAnimal>();

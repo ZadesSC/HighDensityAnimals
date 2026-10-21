@@ -94,6 +94,11 @@ namespace HighDensityAnimals
                 CompDenseAnimal denseComp = DenseAnimalUtility.GetComp(pawn);
                 denseComp?.SetDensity(eggDensity);
             }
+            else if (pawn.RaceProps.Animal && motherOrEgg is Pawn mother &&
+                Patch_HediffPregnant_DoBirthSpawn.CurrentBirth is { } birth && birth.Mother == mother)
+            {
+                DenseAnimalUtility.GetComp(pawn)?.SetDensity(birth.Density);
+            }
         }
     }
 
@@ -101,33 +106,32 @@ namespace HighDensityAnimals
     public static class Patch_HediffPregnant_DoBirthSpawn
     {
         [ThreadStatic]
-        private static bool reentrant;
+        private static BirthContext currentBirth;
 
-        public static void Postfix(Pawn mother, Pawn father)
+        public sealed class BirthContext
         {
-            if (reentrant)
-            {
-                return;
-            }
+            public readonly Pawn Mother;
+            public readonly int Density;
 
-            int density = DenseAnimalUtility.GetDensity(mother);
-            if (density <= 1)
+            public BirthContext(Pawn mother, Pawn father)
             {
-                return;
+                Mother = mother;
+                Density = DenseAnimalUtility.GetOffspringDensity(mother, father);
             }
+        }
 
-            try
-            {
-                reentrant = true;
-                for (int i = 1; i < density; i++)
-                {
-                    Hediff_Pregnant.DoBirthSpawn(mother, father);
-                }
-            }
-            finally
-            {
-                reentrant = false;
-            }
+        internal static BirthContext CurrentBirth => currentBirth;
+
+        public static void Prefix(Pawn mother, Pawn father, out BirthContext __state)
+        {
+            __state = currentBirth;
+            currentBirth = mother?.RaceProps.Animal == true ? new BirthContext(mother, father) : null;
+        }
+
+        public static void Finalizer(BirthContext __state)
+        {
+            // Restore the enclosing birth even when another patch or spawning throws.
+            currentBirth = __state;
         }
     }
 
