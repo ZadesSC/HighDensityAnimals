@@ -1,0 +1,3 @@
+{"type":"start","expected":["legacy_save_migration"],"version":"1.7.4984","artifactHash":"096fddcc12dbf3d360df65fe44ae112eb12b08fd81dd9ce8303aab1a04b9ee8d"}
+{"type":"case","id":"legacy_save_migration","passed":true}
+{"type":"complete"}

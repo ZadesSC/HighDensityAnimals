@@ -19,6 +19,7 @@ namespace HighDensityAnimals
         private int targetDensity = 2;
         private bool automationEnabled = true;
         private bool preventDensityWaste = true;
+        private DensifierSexFilter sexFilter = DensifierSexFilter.Both;
         private float storedNutrition;
         private int cycleEndTick = -1;
         private int cycleTicksRemaining = -1;
@@ -57,6 +58,7 @@ namespace HighDensityAnimals
         public int TargetDensity => targetDensity;
         public bool AutomationEnabled => automationEnabled;
         public bool PreventDensityWaste => preventDensityWaste;
+        public DensifierSexFilter SexFilter => sexFilter;
         private int DensityLimit => Mathf.Min(targetDensity, GetMaxDensity());
         public float StoredNutrition => NutritionStored;
         public bool NeedsAnimal => automationEnabled && selectedSpecies != null && !ActiveCycle && CurrentDensity < targetDensity && AnimalCount < 2;
@@ -122,6 +124,7 @@ namespace HighDensityAnimals
             Scribe_Values.Look(ref targetDensity, "targetDensity", 2);
             Scribe_Values.Look(ref automationEnabled, "automationEnabled", true);
             Scribe_Values.Look(ref preventDensityWaste, "preventDensityWaste", true);
+            Scribe_Values.Look(ref sexFilter, "sexFilter", DensifierSexFilter.Both);
             Scribe_Values.Look(ref storedNutrition, "storedNutrition", 0f);
             Scribe_Values.Look(ref cycleTicksRemaining, "cycleTicksRemaining", -1);
             Scribe_Values.Look(ref cycleEndTick, "cycleEndTick", -1); // Legacy save migration only.
@@ -140,6 +143,7 @@ namespace HighDensityAnimals
 
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
+                if (!IsValidSexFilter(sexFilter)) sexFilter = DensifierSexFilter.Both;
                 EnsureAllowedNutritionSettings();
                 if (cycleTicksRemaining < 0 && cycleEndTick >= 0)
                 {
@@ -152,6 +156,11 @@ namespace HighDensityAnimals
                 // Older accepted cycles always preserved their full combined density.
                 if (ActiveCycle && cycleResultDensity <= 0)
                     cycleResultDensity = cyclePrimaryDensity + cycleSecondaryDensity;
+                // Old saves could disable same-sex pairing. Refund without ejecting or
+                // consuming either animal, even if the saved cycle was paused.
+                if (ActiveCycle && cyclePrimary != null && cycleSecondary != null &&
+                    (cyclePrimary.gender != cycleSecondary.gender || !AllowsSex(cyclePrimary) || !AllowsSex(cycleSecondary)))
+                    CancelCycle();
                 cycleEndTick = -1;
             }
         }
@@ -198,6 +207,7 @@ namespace HighDensityAnimals
 
             lines.Add("HDA_Configuredspecies".Translate() + (selectedSpecies?.label?.CapitalizeFirst() ?? "None".Translate()));
             lines.Add("HDA_Targetdensity".Translate() + targetDensity);
+            lines.Add("HDA_DensifySex".Translate(SexFilterLabel(sexFilter)));
             lines.Add("HDA_Storednutrition".Translate() + NutritionStored.ToString("0.0"));
             lines.Add("HDA_State".Translate() + GetStateLabel());
 
@@ -270,6 +280,17 @@ namespace HighDensityAnimals
             if (AnimalCount > 0 || ActiveCycle) speciesCommand.Disable("HDA_Ejecttheloadedanimalsbeforechangingspecies".Translate());
             yield return speciesCommand;
 
+            Command_Action sexCommand = new Command_Action
+            {
+                defaultLabel = "HDA_DensifySex".Translate(SexFilterLabel(sexFilter)),
+                defaultDesc = "HDA_DensifySexDescription".Translate(),
+                icon = (sexFilter == DensifierSexFilter.FemalesOnly ? Gender.Female :
+                    sexFilter == DensifierSexFilter.MalesOnly ? Gender.Male : Gender.None).GetIcon(),
+                action = OpenSexFilterMenu
+            };
+            if (AnimalCount > 0 || ActiveCycle) sexCommand.Disable("HDA_EjectBeforeChangingSexFilter".Translate());
+            yield return sexCommand;
+
             Command_Action targetDown = new Command_Action
             {
                 defaultLabel = "HDA_TargetDecrease".Translate(),
@@ -330,6 +351,40 @@ namespace HighDensityAnimals
             return true;
         }
 
+        private static bool IsValidSexFilter(DensifierSexFilter value)
+        {
+            return value == DensifierSexFilter.Both || value == DensifierSexFilter.FemalesOnly || value == DensifierSexFilter.MalesOnly;
+        }
+
+        public bool TrySetSexFilter(DensifierSexFilter value)
+        {
+            if (AnimalCount > 0 || ActiveCycle || !IsValidSexFilter(value)) return false;
+            sexFilter = value;
+            return true;
+        }
+
+        private bool AllowsSex(Pawn pawn)
+        {
+            return sexFilter == DensifierSexFilter.Both ||
+                sexFilter == DensifierSexFilter.FemalesOnly && pawn.gender == Gender.Female ||
+                sexFilter == DensifierSexFilter.MalesOnly && pawn.gender == Gender.Male;
+        }
+
+        private static string SexFilterLabel(DensifierSexFilter value)
+        {
+            return (value == DensifierSexFilter.FemalesOnly ? "HDA_DensifyFemalesOnly" :
+                value == DensifierSexFilter.MalesOnly ? "HDA_DensifyMalesOnly" : "HDA_DensifyBoth").Translate();
+        }
+
+        private void OpenSexFilterMenu()
+        {
+            if (AnimalCount > 0 || ActiveCycle) return;
+            List<FloatMenuOption> options = new List<FloatMenuOption>();
+            foreach (DensifierSexFilter value in new[] { DensifierSexFilter.Both, DensifierSexFilter.FemalesOnly, DensifierSexFilter.MalesOnly })
+                options.Add(new FloatMenuOption(SexFilterLabel(value), () => TrySetSexFilter(value)));
+            Find.WindowStack.Add(new FloatMenu(options));
+        }
+
         public bool AcceptsAnimal(Pawn pawn)
         {
             if (ActiveCycle || pawn == SlotA || pawn == SlotB || pawn == null || selectedSpecies == null || DenseAnimalUtility.GetComp(pawn) == null || !DenseAnimalUtility.IsEligibleFusionAnimal(pawn, false))
@@ -337,7 +392,7 @@ namespace HighDensityAnimals
                 return false;
             }
 
-            if (AnimalCount >= 2 || pawn.def != selectedSpecies)
+            if (AnimalCount >= 2 || pawn.def != selectedSpecies || !AllowsSex(pawn))
             {
                 return false;
             }
@@ -502,7 +557,7 @@ namespace HighDensityAnimals
                     (NeedsNutrition ? "HDA_Awaitingnutritionandsecondanimal".Translate() : "HDA_Awaitingsecondanimal".Translate());
             }
 
-            if (!DenseAnimalUtility.CanFuseTogether(SlotA, SlotB) ||
+            if (!AllowsSex(SlotA) || !AllowsSex(SlotB) || !DenseAnimalUtility.CanFuseTogether(SlotA, SlotB) ||
                 !AllowsCombinedDensity(CurrentDensity + DenseAnimalUtility.GetDensity(SlotB)))
                 return "HDA_IncompatibleContents".Translate();
             if (NeedsNutrition)
@@ -521,7 +576,7 @@ namespace HighDensityAnimals
         private bool CanStartCycleNow()
         {
             if (SlotA == null || SlotB == null || DenseAnimalUtility.GetComp(SlotA) == null ||
-                !DenseAnimalUtility.CanFuseTogether(SlotA, SlotB)) return false;
+                !AllowsSex(SlotA) || !AllowsSex(SlotB) || !DenseAnimalUtility.CanFuseTogether(SlotA, SlotB)) return false;
             int result = DenseAnimalUtility.GetDensity(SlotA) + DenseAnimalUtility.GetDensity(SlotB);
             return CurrentDensity < DensityLimit && AllowsCombinedDensity(result) && NutritionStored + 0.001f >= result;
         }
@@ -551,6 +606,7 @@ namespace HighDensityAnimals
             CompDenseAnimal comp = DenseAnimalUtility.GetComp(cyclePrimary);
             if (comp == null || cycleSecondary == null || cyclePrimary != SlotA || cycleSecondary != SlotB ||
                 cyclePrimary.Dead || cycleSecondary.Dead ||
+                cyclePrimary.gender != cycleSecondary.gender || !AllowsSex(cyclePrimary) || !AllowsSex(cycleSecondary) ||
                 DenseAnimalUtility.GetDensity(cyclePrimary) != cyclePrimaryDensity ||
                 DenseAnimalUtility.GetDensity(cycleSecondary) != cycleSecondaryDensity)
             { CancelCycle(); return; }
