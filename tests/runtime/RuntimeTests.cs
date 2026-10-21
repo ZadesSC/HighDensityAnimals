@@ -48,7 +48,7 @@ public sealed class RegressionSuite : GameComponent
     public RegressionSuite(Game game) { }
     static readonly string[] Cases = {
         "package", "egg_stacks", "admission", "pair_selection", "blocked_ejection", "lifecycle",
-        "fusion_and_pause", "post_cycle_partner", "cap_and_cancel", "nutrition", "production", "combat", "offspring", "natural_offspring", "rendering", "settings",
+        "fusion_and_pause", "post_cycle_partner", "density_waste", "cap_and_cancel", "nutrition", "production", "combat", "offspring", "natural_offspring", "rendering", "settings",
         "localization_and_ui", "reachability", "negative_controls", "autonomous_cycles", "interrupted_haul", "save_fixture"
     };
     void Case(string id, Action test, bool reset = true)
@@ -138,6 +138,8 @@ public sealed class RegressionSuite : GameComponent
     }
     static Command_Toggle Automation(Building_AnimalDensifier machine) => machine.GetGizmos().OfType<Command_Toggle>()
         .Single(c => c.defaultLabel == "HDA_Automation".Translate().ToString());
+    static Command_Toggle WasteProtection(Building_AnimalDensifier machine) => machine.GetGizmos().OfType<Command_Toggle>()
+        .Single(c => c.defaultLabel == "HDA_PreventDensityWaste".Translate().ToString());
     void Advance(int ticks) { for (int i = 0; i < ticks; i++) Find.TickManager.DoSingleTick(); }
     void FinishByNormalTicks(Building_AnimalDensifier machine)
     {
@@ -279,6 +281,39 @@ public sealed class RegressionSuite : GameComponent
                     Assert(machine.FindNextAnimal(Worker()) == null, "Ejected animal selected without compatible pair: " + scenario);
                 }
             }
+        });
+        Case("density_waste", () => {
+            foreach (var scenario in new[] { (target: 5, max: 25, input: 3), (target: 10, max: 10, input: 6), (target: 10, max: 7, input: 4) }) {
+                ResetFixture();
+                var machine = Machine(scenario.target); var worker = Worker();
+                HighDensityAnimalsMod.Settings.maxDensity = scenario.max;
+                var a = Animal(density: scenario.input); var b = Animal(density: scenario.input);
+                Assert(machine.PreventDensityWaste && WasteProtection(machine).isActive(), "Protection is not enabled by default");
+                Assert(machine.FindNextAnimal(worker) == null && !new WorkGiver_LoadAnimalToDensifier().HasJobOnThing(worker, machine),
+                    "Protected machine offered an overflowing hauling job");
+                Assert(machine.TryInsertAnimal(a) && !machine.AcceptsAnimal(b), "Protected machine admitted overflowing pair");
+                WasteProtection(machine).toggleAction();
+                Assert(machine.FindNextAnimal(worker) == b && new WorkGiver_LoadAnimalToDensifier().HasJobOnThing(worker, machine),
+                    "Unprotected machine did not offer overflowing partner");
+                Assert(!machine.AcceptsAnimal(Animal(sex: Gender.Male)), "Disabling protection bypassed sex compatibility");
+                Assert(machine.TryInsertAnimal(b), "Unprotected machine rejected overflowing pair");
+                var food = ThingMaker.MakeThing(ThingDefOf.RawPotatoes); food.stackCount = 400;
+                machine.GetDirectlyHeldThings().TryAdd(food);
+                WasteProtection(machine).toggleAction(); machine.TickRare();
+                Assert(!machine.ActiveCycle, "Re-enabled protection did not block loaded overflowing pair");
+                WasteProtection(machine).toggleAction(); machine.TickRare();
+                Assert(machine.ActiveCycle, "Overflow cycle did not start");
+                Assert((bool)AccessTools.Field(typeof(Gizmo), "disabled").GetValue(WasteProtection(machine)), "Protection toggle enabled during cycle");
+                for (int i = 0; i < 12; i++) machine.TickRare();
+                Assert(!machine.ActiveCycle && a.Spawned && b.Destroyed && DenseAnimalUtility.GetDensity(a) == Math.Min(scenario.target, scenario.max),
+                    "Overflow cycle did not eject a capped survivor");
+                Near(machine.StoredNutrition, 20f - scenario.input * 2, "Overflow cycle charged incorrect nutrition");
+            }
+            ResetFixture();
+            var exact = Machine(6); WasteProtection(exact).toggleAction();
+            var first = Animal(density: 3); var second = Animal(density: 3); Load(exact, first, second, 160);
+            exact.TickRare(); for (int i = 0; i < 12; i++) exact.TickRare();
+            Assert(DenseAnimalUtility.GetDensity(first) == 6 && second.Destroyed, "Exact-limit pair lost density");
         });
         Case("cap_and_cancel", () => {
             var machine = Machine(10); var a = Animal(density: 3); var b = Animal(density: 3); Load(machine, a, b, 160);
@@ -489,7 +524,7 @@ public sealed class RegressionSuite : GameComponent
             var variants = new List<object>();
             object Snapshot(string state, Building_AnimalDensifier holder) => new {
                 state, machine = holder.thingIDNumber, density = holder.CurrentDensity, nutrition = holder.StoredNutrition,
-                remaining = holder.CycleTicksRemaining, automation = holder.AutomationEnabled,
+                remaining = holder.CycleTicksRemaining, automation = holder.AutomationEnabled, protection = holder.PreventDensityWaste,
                 pawns = holder.GetDirectlyHeldThings().OfType<Pawn>().Select(p => p.thingIDNumber).ToArray()
             };
             var empty = Machine(offset: new IntVec3(-16, 0, 0)); variants.Add(Snapshot("empty", empty));
@@ -498,6 +533,9 @@ public sealed class RegressionSuite : GameComponent
             var foodOnly = Machine(offset: new IntVec3(16, 0, 0)); var raw = ThingMaker.MakeThing(ThingDefOf.RawPotatoes); raw.stackCount = 7;
             foodOnly.GetDirectlyHeldThings().TryAdd(raw); variants.Add(Snapshot("food_only", foodOnly));
             var powered = Machine(5, offset: new IntVec3(0, 0, 8)); Load(powered, Animal(), Animal()); powered.TickRare(); variants.Add(Snapshot("powered_cycle", powered));
+            var overflow = Machine(5, offset: new IntVec3(0, 0, -8)); WasteProtection(overflow).toggleAction();
+            Load(overflow, Animal(density: 3), Animal(density: 3), 160); overflow.TickRare(); Automation(overflow).toggleAction();
+            Assert(overflow.ActiveCycle, "Overflow save fixture did not start"); variants.Add(Snapshot("overflow_cycle", overflow));
             RegressionMod.Write(new { type = "snapshot", machine = machine.thingIDNumber, primary = a.thingIDNumber, secondary = b.thingIDNumber,
                 remaining = machine.CycleTicksRemaining, nutrition = machine.StoredNutrition, egg = egg.thingIDNumber, variants });
             GameDataSaveLoader.SaveGame("HdaRegression");
@@ -546,8 +584,17 @@ public sealed class RegressionSuite : GameComponent
                 var holder = Map.listerThings.AllThings.OfType<Building_AnimalDensifier>().Single(b => b.thingIDNumber == variant.GetProperty("machine").GetInt32());
                 Assert(holder.CurrentDensity == variant.GetProperty("density").GetInt32() && holder.CycleTicksRemaining == variant.GetProperty("remaining").GetInt32(), "Variant density/timer not restored: " + variant.GetProperty("state"));
                 Assert(holder.AutomationEnabled == variant.GetProperty("automation").GetBoolean(), "Variant automation not restored");
+                Assert(holder.PreventDensityWaste == variant.GetProperty("protection").GetBoolean(), "Density waste protection not restored");
                 Near(holder.StoredNutrition, variant.GetProperty("nutrition").GetSingle(), "Variant food/liquid nutrition not restored");
                 Assert(holder.GetDirectlyHeldThings().OfType<Pawn>().Select(p => p.thingIDNumber).SequenceEqual(variant.GetProperty("pawns").EnumerateArray().Select(e => e.GetInt32())), "Variant pawn identities not restored");
+                if (variant.GetProperty("state").GetString() == "overflow_cycle") {
+                    var inputs = holder.GetDirectlyHeldThings().OfType<Pawn>().ToList();
+                    Automation(holder).toggleAction(); holder.GetComp<CompPowerTrader>().PowerOn = true;
+                    for (int i = 0; i < 12; i++) holder.TickRare();
+                    Assert(!holder.ActiveCycle && DenseAnimalUtility.GetDensity(inputs[0]) == 5 && inputs[0].Spawned && inputs[1].Destroyed,
+                        "Reloaded overflow cycle did not preserve its capped result");
+                    Near(holder.StoredNutrition, variant.GetProperty("nutrition").GetSingle(), "Reloaded overflow cycle charged twice");
+                }
             }
             Assert(machine.SelectedSpecies == ThingDef.Named("Cow") && machine.TargetDensity == 17 && !machine.AutomationEnabled, "Configuration not restored");
             Assert(!machine.GetStoreSettings().filter.Allows(ThingDefOf.RawPotatoes), "Storage filter not restored");

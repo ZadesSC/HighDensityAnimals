@@ -19,7 +19,7 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 PREPARE_CASES = {
     'package', 'egg_stacks', 'admission', 'pair_selection', 'blocked_ejection', 'lifecycle',
-    'fusion_and_pause', 'post_cycle_partner', 'cap_and_cancel', 'nutrition', 'production', 'combat', 'offspring', 'natural_offspring', 'rendering', 'settings',
+    'fusion_and_pause', 'post_cycle_partner', 'density_waste', 'cap_and_cancel', 'nutrition', 'production', 'combat', 'offspring', 'natural_offspring', 'rendering', 'settings',
     'localization_and_ui', 'reachability', 'negative_controls', 'autonomous_cycles', 'interrupted_haul', 'save_fixture'
 }
 RESUME_CASES = {'fresh_process_reload'}
@@ -183,7 +183,7 @@ def main():
             building = next((b for b in saved.findall(".//thing[@Class='HighDensityAnimals.Building_AnimalDensifier']")
                              if b.findtext('id') == f"HDA_AnimalDensifier{snapshot['machine']}"), None)
             if building is None: raise RuntimeError('No densifier in persistence fixture')
-            for key in ['cycleTicksRemaining', 'cyclePrimary', 'cycleSecondary', 'cyclePrimaryDensity', 'cycleSecondaryDensity', 'cycleNutrition']:
+            for key in ['cycleTicksRemaining', 'cyclePrimary', 'cycleSecondary', 'cyclePrimaryDensity', 'cycleSecondaryDensity', 'cycleNutrition', 'cycleResultDensity', 'preventDensityWaste']:
                 el = building.find(key)
                 if el is not None: building.remove(el)
             end = building.find('cycleEndTick')

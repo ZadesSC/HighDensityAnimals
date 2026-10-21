@@ -4,6 +4,8 @@
   <HDA_Alreadyatminimumtargetdensity>Already at minimum target density.</HDA_Alreadyatminimumtargetdensity>
   <HDA_Automaticallypullinanimalsandnutritionuntilthetargetdensityisreached>Automatically pull in animals and nutrition until the target density is reached.</HDA_Automaticallypullinanimalsandnutritionuntilthetargetdensityisreached>
   <HDA_Automation>Automation</HDA_Automation>
+  <HDA_PreventDensityWaste>Prevent density waste</HDA_PreventDensityWaste>
+  <HDA_PreventDensityWasteDescription>When enabled, only merge pairs whose combined density fits the machine's target and global maximum. When disabled, allow overflowing pairs and discard excess density: the result is capped at the lower limit when the cycle starts. The secondary animal is consumed, and nutrition costs are based on the full combined input density.</HDA_PreventDensityWasteDescription>
   <HDA_Awaitingfirstanimal>Awaiting first animal</HDA_Awaitingfirstanimal>
   <HDA_Awaitingnutrition>Awaiting nutrition</HDA_Awaitingnutrition>
   <HDA_Awaitingnutritionandsecondanimal>Awaiting nutrition and second animal</HDA_Awaitingnutritionandsecondanimal>

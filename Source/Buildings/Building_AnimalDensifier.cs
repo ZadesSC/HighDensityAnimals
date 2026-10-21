@@ -18,6 +18,7 @@ namespace HighDensityAnimals
         private ThingDef selectedSpecies;
         private int targetDensity = 2;
         private bool automationEnabled = true;
+        private bool preventDensityWaste = true;
         private float storedNutrition;
         private int cycleEndTick = -1;
         private int cycleTicksRemaining = -1;
@@ -26,6 +27,7 @@ namespace HighDensityAnimals
         private int cyclePrimaryDensity;
         private int cycleSecondaryDensity;
         private float cycleNutrition;
+        private int cycleResultDensity;
 
         public Building_AnimalDensifier()
         {
@@ -54,6 +56,8 @@ namespace HighDensityAnimals
         public ThingDef SelectedSpecies => selectedSpecies;
         public int TargetDensity => targetDensity;
         public bool AutomationEnabled => automationEnabled;
+        public bool PreventDensityWaste => preventDensityWaste;
+        private int DensityLimit => Mathf.Min(targetDensity, GetMaxDensity());
         public float StoredNutrition => NutritionStored;
         public bool NeedsAnimal => automationEnabled && selectedSpecies != null && !ActiveCycle && CurrentDensity < targetDensity && AnimalCount < 2;
         public bool NeedsNutrition => automationEnabled && !ActiveCycle && selectedSpecies != null && CurrentDensity < targetDensity && NutritionNeededForNextCycle > 0.001f;
@@ -117,6 +121,7 @@ namespace HighDensityAnimals
             Scribe_Defs.Look(ref selectedSpecies, "selectedSpecies");
             Scribe_Values.Look(ref targetDensity, "targetDensity", 2);
             Scribe_Values.Look(ref automationEnabled, "automationEnabled", true);
+            Scribe_Values.Look(ref preventDensityWaste, "preventDensityWaste", true);
             Scribe_Values.Look(ref storedNutrition, "storedNutrition", 0f);
             Scribe_Values.Look(ref cycleTicksRemaining, "cycleTicksRemaining", -1);
             Scribe_Values.Look(ref cycleEndTick, "cycleEndTick", -1); // Legacy save migration only.
@@ -125,6 +130,7 @@ namespace HighDensityAnimals
             Scribe_Values.Look(ref cyclePrimaryDensity, "cyclePrimaryDensity");
             Scribe_Values.Look(ref cycleSecondaryDensity, "cycleSecondaryDensity");
             Scribe_Values.Look(ref cycleNutrition, "cycleNutrition");
+            Scribe_Values.Look(ref cycleResultDensity, "cycleResultDensity");
             Scribe_Deep.Look(ref allowedNutritionSettings, "allowedNutritionSettings", this);
             Scribe_Deep.Look(ref innerContainer, "innerContainer", this);
             if (Scribe.mode == LoadSaveMode.PostLoadInit && innerContainer == null)
@@ -143,6 +149,9 @@ namespace HighDensityAnimals
                 {
                     CaptureCycleInputs();
                 }
+                // Older accepted cycles always preserved their full combined density.
+                if (ActiveCycle && cycleResultDensity <= 0)
+                    cycleResultDensity = cyclePrimaryDensity + cycleSecondaryDensity;
                 cycleEndTick = -1;
             }
         }
@@ -236,6 +245,16 @@ namespace HighDensityAnimals
                 isActive = () => automationEnabled,
                 toggleAction = () => automationEnabled = !automationEnabled
             };
+
+            Command_Toggle wasteProtection = new Command_Toggle
+            {
+                defaultLabel = "HDA_PreventDensityWaste".Translate(),
+                defaultDesc = "HDA_PreventDensityWasteDescription".Translate(),
+                isActive = () => preventDensityWaste,
+                toggleAction = () => preventDensityWaste = !preventDensityWaste
+            };
+            if (ActiveCycle) wasteProtection.Disable("HDA_Finishorcancelthecurrentcyclefirst".Translate());
+            yield return wasteProtection;
 
             Command_Action speciesCommand = new Command_Action
             {
@@ -340,7 +359,7 @@ namespace HighDensityAnimals
             }
 
             int totalDensity = DenseAnimalUtility.GetDensity(SlotA) + pawnDensity;
-            return totalDensity <= targetDensity && totalDensity <= GetMaxDensity();
+            return AllowsCombinedDensity(totalDensity);
         }
 
         public bool TryInsertAnimal(Pawn pawn)
@@ -377,7 +396,7 @@ namespace HighDensityAnimals
             // Do not commit a lone animal when a different compatible pair is available.
             foreach (Pawn first in candidates)
                 if (candidates.Any(second => second != first && DenseAnimalUtility.CanFuseTogether(first, second) &&
-                    DenseAnimalUtility.GetDensity(first) + DenseAnimalUtility.GetDensity(second) <= Mathf.Min(targetDensity, GetMaxDensity())))
+                    AllowsCombinedDensity(DenseAnimalUtility.GetDensity(first) + DenseAnimalUtility.GetDensity(second))))
                     return first;
             return null;
         }
@@ -484,7 +503,7 @@ namespace HighDensityAnimals
             }
 
             if (!DenseAnimalUtility.CanFuseTogether(SlotA, SlotB) ||
-                CurrentDensity + DenseAnimalUtility.GetDensity(SlotB) > Mathf.Min(targetDensity, GetMaxDensity()))
+                !AllowsCombinedDensity(CurrentDensity + DenseAnimalUtility.GetDensity(SlotB)))
                 return "HDA_IncompatibleContents".Translate();
             if (NeedsNutrition)
             {
@@ -494,12 +513,17 @@ namespace HighDensityAnimals
             return "HDA_Ready".Translate();
         }
 
+        private bool AllowsCombinedDensity(int density)
+        {
+            return !preventDensityWaste || density <= DensityLimit;
+        }
+
         private bool CanStartCycleNow()
         {
             if (SlotA == null || SlotB == null || DenseAnimalUtility.GetComp(SlotA) == null ||
                 !DenseAnimalUtility.CanFuseTogether(SlotA, SlotB)) return false;
             int result = DenseAnimalUtility.GetDensity(SlotA) + DenseAnimalUtility.GetDensity(SlotB);
-            return result <= targetDensity && result <= GetMaxDensity() && NutritionStored + 0.001f >= result;
+            return CurrentDensity < DensityLimit && AllowsCombinedDensity(result) && NutritionStored + 0.001f >= result;
         }
 
         private void CaptureCycleInputs()
@@ -509,6 +533,8 @@ namespace HighDensityAnimals
             cyclePrimaryDensity = DenseAnimalUtility.GetDensity(cyclePrimary);
             cycleSecondaryDensity = DenseAnimalUtility.GetDensity(cycleSecondary);
             cycleNutrition = cyclePrimaryDensity + cycleSecondaryDensity;
+            cycleResultDensity = preventDensityWaste ? cyclePrimaryDensity + cycleSecondaryDensity :
+                Mathf.Min(cyclePrimaryDensity + cycleSecondaryDensity, DensityLimit);
         }
 
         private void StartCycle()
@@ -521,7 +547,7 @@ namespace HighDensityAnimals
 
         private void CompleteCycle()
         {
-            // Admission limits govern new cycles. An accepted cycle always preserves its full density.
+            // Preserve the output accepted at cycle start, including any intentional density loss.
             CompDenseAnimal comp = DenseAnimalUtility.GetComp(cyclePrimary);
             if (comp == null || cycleSecondary == null || cyclePrimary != SlotA || cycleSecondary != SlotB ||
                 cyclePrimary.Dead || cycleSecondary.Dead ||
@@ -529,7 +555,7 @@ namespace HighDensityAnimals
                 DenseAnimalUtility.GetDensity(cycleSecondary) != cycleSecondaryDensity)
             { CancelCycle(); return; }
             Pawn consumed = cycleSecondary;
-            comp.SetDensity(cyclePrimaryDensity + cycleSecondaryDensity);
+            comp.SetDensity(cycleResultDensity);
             innerContainer.Remove(consumed);
             consumed.Destroy(DestroyMode.Vanish);
             ClearCycle();
@@ -543,6 +569,7 @@ namespace HighDensityAnimals
             cycleNutrition = 0f;
             cyclePrimary = cycleSecondary = null;
             cyclePrimaryDensity = cycleSecondaryDensity = 0;
+            cycleResultDensity = 0;
         }
 
         private void CancelCycle()

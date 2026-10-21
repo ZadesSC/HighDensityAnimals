@@ -2,6 +2,7 @@
 
 ## 0.2.0
 
+- Add a per-machine Prevent density waste gizmo, enabled by default; disabling it allows overflowing fusion pairs with capped output and full input nutrition cost.
 - Target RimWorld 1.7 only, move definitions into `1.7/Defs`, and publish source-inclusive prerelease packages through GitHub Actions.
 - Eject the surviving animal after fusion when no eligible partner remains for another cycle.
 - Rebuild the 1.6 assembly and explicitly select version-specific load folders, fixing the missing densifier storage tab on 1.6.
