@@ -68,6 +68,8 @@ Distribute `1.7` (containing `Assemblies` and `Defs`), `About`, `Languages`, `So
 
 Push a `v*` tag to run the GitHub Actions prerelease workflow. It builds the 1.7 DLL against pinned NuGet reference assemblies, validates and archives the package, and publishes the ZIP and SHA-256 checksum as a GitHub prerelease. The same build/package step can be run locally with `python3 scripts/build_release.py --version v0.2.0-pre.1`.
 
+Pushes to `dev` and pull requests targeting `dev` run **Build dev package** automatically. Download `HighDensityAnimals-dev-<run>-<attempt>` from the completed Actions run for a uniquely versioned mod ZIP, `SHA256SUMS`, and `BUILD_INFO.json` identifying the built commit and DLL hash. Artifacts are retained for 30 days. This workflow runs the Python validator tests and builds against pinned references; the in-game regression suite requires a local game installation and runs separately.
+
 Before disabling the mod in an existing save, eject every machine and remove/downgrade density-specific animals and eggs using an appropriate save migration. There is currently no automatic uninstall migration: removing the mod loses density metadata and removes its buildings. Keep a backup when changing mods.
 
 ## License and assets
