@@ -1,6 +1,10 @@
 # Recorded verification
 
-The per-machine sex filter and mandatory same-sex fusion are verified in [densifier-sex-filter/README.md](densifier-sex-filter/README.md).
+The combined inheritance and sex-filter build is verified in [offspring-density-integrated/README.md](offspring-density-integrated/README.md).
+
+The earlier standalone live-birth density inheritance change is verified separately in [offspring-density-inheritance/README.md](offspring-density-inheritance/README.md).
+
+The earlier standalone per-machine sex filter and mandatory same-sex fusion are verified in [densifier-sex-filter/README.md](densifier-sex-filter/README.md).
 
 ## Earlier baseline
 

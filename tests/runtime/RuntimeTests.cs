@@ -41,6 +41,11 @@ public sealed class RegressionSuite : GameComponent
     readonly List<Thing> fixture = new();
     Map Map => Find.CurrentMap;
     static Thing blockedPlacement;
+    static Action<Pawn> beforeBirthSpawn;
+    public static void BirthSpawnPrefix(Thing motherOrEgg)
+    {
+        if (motherOrEgg is Pawn mother) beforeBirthSpawn?.Invoke(mother);
+    }
     static void Set(object obj, string name, object value) => AccessTools.Field(obj.GetType(), name).SetValue(obj, value);
     static void Assert(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
     static void Near(float actual, float expected, string message, float tolerance = .001f) =>
@@ -48,7 +53,7 @@ public sealed class RegressionSuite : GameComponent
     public RegressionSuite(Game game) { }
     static readonly string[] Cases = {
         "package", "egg_stacks", "admission", "pair_selection", "sex_filter", "sex_filter_ui", "same_sex", "sex_filter_hauling", "blocked_ejection", "lifecycle",
-        "fusion_and_pause", "post_cycle_partner", "density_waste", "cap_and_cancel", "nutrition", "production", "combat", "offspring", "natural_offspring", "rendering", "settings",
+        "fusion_and_pause", "post_cycle_partner", "density_waste", "cap_and_cancel", "nutrition", "production", "combat", "offspring", "birth_inheritance", "birth_context", "natural_offspring", "rendering", "settings",
         "localization_and_ui", "reachability", "negative_controls", "autonomous_cycles", "interrupted_haul", "save_fixture"
     };
     void Case(string id, Action test, bool reset = true)
@@ -151,6 +156,16 @@ public sealed class RegressionSuite : GameComponent
         return options;
     }
     void Advance(int ticks) { for (int i = 0; i < ticks; i++) Find.TickManager.DoSingleTick(); }
+    List<Pawn> Birth(Pawn mother, Pawn father, int seed = 723)
+    {
+        var before = Map.mapPawns.AllPawnsSpawned.ToHashSet();
+        Rand.PushState(seed);
+        try { Hediff_Pregnant.DoBirthSpawn(mother, father); }
+        finally { Rand.PopState(); }
+        var babies = Map.mapPawns.AllPawnsSpawned.Where(p => !before.Contains(p)).ToList();
+        fixture.AddRange(babies);
+        return babies;
+    }
     void FinishByNormalTicks(Building_AnimalDensifier machine)
     {
         for (int i = 0; i < 3500 && machine.ActiveCycle; i++) Find.TickManager.DoSingleTick();
@@ -492,17 +507,70 @@ public sealed class RegressionSuite : GameComponent
             Assert(chicks.Count == 1 && DenseAnimalUtility.GetDensity(chicks[0]) == 3, "Dense chick hatch incorrect");
             var mother = Animal(density: 3); var father = Animal(sex: Gender.Male); before = Map.mapPawns.AllPawnsSpawned.ToHashSet();
             Hediff_Pregnant.DoBirthSpawn(mother, father); var calves = Map.mapPawns.AllPawnsSpawned.Where(p => !before.Contains(p)).ToList(); fixture.AddRange(calves);
-            Assert(calves.Count == 3 && calves.All(p => DenseAnimalUtility.GetDensity(p) == 1), "Mammal birth scaling incorrect");
+            Assert(calves.Count == 1 && DenseAnimalUtility.GetDensity(calves[0]) == 2, "Cow must produce one calf with averaged density");
+        });
+        Case("birth_inheritance", () => {
+            foreach (var scenario in new[] { (1, 1, 1), (5, 5, 5), (5, 2, 3), (2, 5, 3), (1, 5, 3), (2, 1, 1), (5, 0, 3) }) {
+                var mother = Animal(density: scenario.Item1);
+                var father = scenario.Item2 == 0 ? null : Animal(density: scenario.Item2, sex: Gender.Male);
+                var babies = Birth(mother, father);
+                Assert(babies.Count == 1, "Density changed cow litter size");
+                Assert(DenseAnimalUtility.GetDensity(babies[0]) == scenario.Item3, "Incorrect parental density average");
+            }
+            var pig = Animal("Pig"); var boar = Animal("Pig", 5, Gender.Male);
+            for (int seed = 0; seed < 6; seed++) {
+                pig.GetComp<CompDenseAnimal>().SetDensity(1);
+                var normalLitter = Birth(pig, boar, seed);
+                pig.GetComp<CompDenseAnimal>().SetDensity(5);
+                var denseLitter = Birth(pig, boar, seed);
+                Assert(normalLitter.Count == denseLitter.Count, "Density changed seeded pig litter size");
+                Assert(normalLitter.All(p => DenseAnimalUtility.GetDensity(p) == 3) &&
+                    denseLitter.All(p => DenseAnimalUtility.GetDensity(p) == 5), "Not every littermate inherited density");
+            }
+            var highMother = Animal(density: int.MaxValue); var highFather = Animal(density: int.MaxValue, sex: Gender.Male);
+            Assert(DenseAnimalUtility.GetOffspringDensity(highMother, highFather) == int.MaxValue, "Density average overflowed");
+        });
+        Case("birth_context", () => {
+            var harmony = new Harmony("local.hda.regression.birth");
+            var spawn = AccessTools.Method(typeof(RimWorld.PawnUtility), "TrySpawnHatchedOrBornPawn");
+            harmony.Patch(spawn, prefix: new HarmonyMethod(typeof(RegressionSuite), nameof(BirthSpawnPrefix)) { priority = Priority.Last });
+            try {
+                var mother = Animal("Pig", 5); var father = Animal("Pig", 3, Gender.Male);
+                var nestedMother = Animal(density: 9); var nestedFather = Animal(density: 5, sex: Gender.Male);
+                List<Pawn> nested = null;
+                beforeBirthSpawn = p => {
+                    if (p != mother || nested != null) return;
+                    nested = Birth(nestedMother, nestedFather);
+                };
+                var all = Birth(mother, father);
+                Assert(nested?.Count == 1 && DenseAnimalUtility.GetDensity(nested[0]) == 7, "Nested birth lost parent context");
+                Assert(all.Where(p => p.def == mother.def).All(p => DenseAnimalUtility.GetDensity(p) == 4), "Outer birth context was not restored");
+                beforeBirthSpawn = p => { throw new InvalidOperationException("Injected birth failure"); };
+                bool threw = false;
+                try { Birth(mother, father); }
+                catch (InvalidOperationException e) when (e.Message == "Injected birth failure") { threw = true; }
+                Assert(threw, "Birth failure was not injected");
+                Assert(AccessTools.Field(typeof(Patch_HediffPregnant_DoBirthSpawn), "currentBirth").GetValue(null) == null,
+                    "Birth context leaked after exception");
+                beforeBirthSpawn = null;
+                var baby = Animal(age: 0); baby.DeSpawn();
+                Assert(RimWorld.PawnUtility.TrySpawnHatchedOrBornPawn(baby, mother), "Standalone spawn failed");
+                Assert(DenseAnimalUtility.GetDensity(baby) == 1, "Birth context affected an unrelated spawn");
+            }
+            finally { beforeBirthSpawn = null; harmony.UnpatchAll(harmony.Id); }
         });
         Case("natural_offspring", () => {
             var chicken = Animal("Chicken", 3); var layer = chicken.GetComp<CompEggLayer>(); layer.Fertilize(chicken);
             var egg = layer.ProduceEgg(); fixture.Add(egg); GenSpawn.Spawn(egg, Map.Center + new IntVec3(8, 0, 8), Map);
             Set(egg.TryGetComp<CompHatcher>(), "gestateProgress", .9999f);
-            var mother = Animal(density: 3); var pregnancy = mother.health.AddHediff(HediffDef.Named("Pregnant")); pregnancy.Severity = .9999f;
+            var mother = Animal(density: 5); var father = Animal(density: 2, sex: Gender.Male);
+            var pregnancy = (Hediff_Pregnant)mother.health.AddHediff(HediffDef.Named("Pregnant"));
+            pregnancy.SetParents(mother, father, null); pregnancy.Severity = .9999f;
             var before = Map.mapPawns.AllPawnsSpawned.ToHashSet(); Advance(1250);
             var babies = Map.mapPawns.AllPawnsSpawned.Where(p => !before.Contains(p)).ToList(); fixture.AddRange(babies);
             Assert(babies.Count(p => p.def == ThingDef.Named("Chicken") && DenseAnimalUtility.GetDensity(p) == 3) == 1, "Naturally ticked incubation lost dense embryo");
-            Assert(babies.Count(p => p.def == ThingDef.Named("Cow")) == 3, "Naturally ticked pregnancy did not scale birth");
+            var calves = babies.Where(p => p.def == ThingDef.Named("Cow")).ToList();
+            Assert(calves.Count == 1 && DenseAnimalUtility.GetDensity(calves[0]) == 3, "Naturally ticked birth must produce one calf with averaged density");
             Assert(!mother.health.hediffSet.HasHediff(HediffDef.Named("Pregnant")), "Pregnancy did not finish");
         });
         Case("rendering", () => {
@@ -626,11 +694,15 @@ public sealed class RegressionSuite : GameComponent
             var overflow = Machine(5, offset: new IntVec3(0, 0, -8)); WasteProtection(overflow).toggleAction();
             Load(overflow, Animal(density: 3), Animal(density: 3), 160); overflow.TickRare(); Automation(overflow).toggleAction();
             Assert(overflow.ActiveCycle, "Overflow save fixture did not start"); variants.Add(Snapshot("overflow_cycle", overflow));
+            var pregnantMother = Animal(density: 5); var birthFather = Animal(density: 2, sex: Gender.Male);
+            var pregnancy = (Hediff_Pregnant)pregnantMother.health.AddHediff(HediffDef.Named("Pregnant"));
+            pregnancy.SetParents(pregnantMother, birthFather, null); pregnancy.Severity = .9999f;
             var mixed = Machine(4, offset: new IntVec3(0, 0, 16)); var mixedA = Animal(); var mixedB = Animal();
             Load(mixed, mixedA, mixedB); mixed.TickRare(); mixedB.gender = Gender.Male; Automation(mixed).toggleAction();
             Assert(mixed.ActiveCycle, "Mixed save fixture did not start"); variants.Add(Snapshot("mixed_cycle", mixed));
             RegressionMod.Write(new { type = "snapshot", machine = machine.thingIDNumber, primary = a.thingIDNumber, secondary = b.thingIDNumber,
-                remaining = machine.CycleTicksRemaining, nutrition = machine.StoredNutrition, egg = egg.thingIDNumber, variants });
+                remaining = machine.CycleTicksRemaining, nutrition = machine.StoredNutrition, egg = egg.thingIDNumber,
+                pregnantMother = pregnantMother.thingIDNumber, birthFather = birthFather.thingIDNumber, variants });
             GameDataSaveLoader.SaveGame("HdaRegression");
         });
     }
@@ -673,6 +745,13 @@ public sealed class RegressionSuite : GameComponent
             var snapshot = JsonDocument.Parse(File.ReadAllLines(Environment.GetEnvironmentVariable("HDA_TEST_PREPARE_REPORT"))
                 .Single(s => JsonDocument.Parse(s).RootElement.GetProperty("type").GetString() == "snapshot")).RootElement;
             var machine = Map.listerThings.AllThings.OfType<Building_AnimalDensifier>().Single(b => b.thingIDNumber == snapshot.GetProperty("machine").GetInt32());
+            var pregnantMother = Map.mapPawns.AllPawnsSpawned.Single(p => p.thingIDNumber == snapshot.GetProperty("pregnantMother").GetInt32());
+            var birthFather = Map.mapPawns.AllPawnsSpawned.Single(p => p.thingIDNumber == snapshot.GetProperty("birthFather").GetInt32());
+            var pregnancy = pregnantMother.health.hediffSet.hediffs.OfType<Hediff_Pregnant>().Single();
+            Assert(pregnancy.Father == birthFather, "Pregnancy lost father on reload");
+            // Inheritance uses densities at birth, rather than conception or save time.
+            birthFather.GetComp<CompDenseAnimal>().SetDensity(4);
+            var beforeBirth = Map.mapPawns.AllPawnsSpawned.ToHashSet();
             foreach (var variant in snapshot.GetProperty("variants").EnumerateArray()) {
                 var holder = Map.listerThings.AllThings.OfType<Building_AnimalDensifier>().Single(b => b.thingIDNumber == variant.GetProperty("machine").GetInt32());
                 Assert((int)holder.SexFilter == variant.GetProperty("sexFilter").GetInt32(), "Sex filter not restored");
@@ -717,6 +796,11 @@ public sealed class RegressionSuite : GameComponent
             Assert(DenseAnimalUtility.GetDensity(animals[0]) == 4 && !animals[0].Destroyed && animals[1].Destroyed &&
                 (animals[0].Spawned || animals[0].ParentHolder == machine), "Restored cycle result incorrect");
             Near(machine.StoredNutrition, snapshot.GetProperty("nutrition").GetSingle(), "Restored cycle charged twice");
+            var calves = Map.mapPawns.AllPawnsSpawned.Where(p => !beforeBirth.Contains(p) &&
+                p.relations.DirectRelationExists(PawnRelationDefOf.Parent, pregnantMother)).ToList();
+            Assert(calves.Count == 1 && DenseAnimalUtility.GetDensity(calves[0]) == 4,
+                "Reloaded pregnancy changed litter size or lost parental density inheritance: " + string.Join(",", calves.Select(p => DenseAnimalUtility.GetDensity(p))));
+            Assert(!pregnantMother.health.hediffSet.hediffs.OfType<Hediff_Pregnant>().Any(), "Reloaded pregnancy did not complete");
         }, false);
         RegressionMod.Write(new { type = "complete" });
     }
