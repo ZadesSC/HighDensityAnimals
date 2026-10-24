@@ -39,7 +39,12 @@
   <HDA_Ready>Ready</HDA_Ready>
   <HDA_Readytoeject>Ready to eject</HDA_Readytoeject>
   <HDA_Requireadultsonly>Require adults only</HDA_Requireadultsonly>
-  <HDA_Requiresamesexforfusion>Require same sex for fusion</HDA_Requiresamesexforfusion>
+  <HDA_DensifySex>Densify: {0}</HDA_DensifySex>
+  <HDA_DensifyBoth>Both</HDA_DensifyBoth>
+  <HDA_DensifyFemalesOnly>Females only</HDA_DensifyFemalesOnly>
+  <HDA_DensifyMalesOnly>Males only</HDA_DensifyMalesOnly>
+  <HDA_DensifySexDescription>Choose which animals this machine loads. Both allows either sex and animals without a sex. Fusion always requires two animals of the same sex.</HDA_DensifySexDescription>
+  <HDA_EjectBeforeChangingSexFilter>Eject the loaded animals before changing the sex filter.</HDA_EjectBeforeChangingSexFilter>
   <HDA_Scalecombatstatsbydensity>Scale combat stats by density</HDA_Scalecombatstatsbydensity>
   <HDA_Scalehealthbydensity>Scale health by density</HDA_Scalehealthbydensity>
   <HDA_Scalemarketvaluebydensity>Scale market value by density</HDA_Scalemarketvaluebydensity>

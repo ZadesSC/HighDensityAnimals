@@ -1,0 +1,64 @@
+name: Build dev package
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dev-build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check result validator
+        run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Build and validate dev package
+        shell: bash
+        run: |
+          version="$(python -c 'import xml.etree.ElementTree as ET; print(ET.parse("About/About.xml").findtext("modVersion"))')"
+          python scripts/build_release.py --version "v${version}-dev.${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}.g${GITHUB_SHA:0:7}"
+      - name: Record build identity
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+
+          package = next(Path('dist').glob('*.zip'))
+          identity = {
+              'commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+              'ref': os.environ['GITHUB_REF'],
+              'event': os.environ['GITHUB_EVENT_NAME'],
+              'runUrl': f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+              'package': package.name,
+              'packageSha256': hashlib.sha256(package.read_bytes()).hexdigest(),
+              'assemblySha256': hashlib.sha256(Path('1.7/Assemblies/HighDensityAnimals.dll').read_bytes()).hexdigest(),
+          }
+          Path('dist/BUILD_INFO.json').write_text(json.dumps(identity, indent=2) + '\n')
+          PY
+      - name: Preserve dev artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: HighDensityAnimals-dev-${{ github.run_number }}-${{ github.run_attempt }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
