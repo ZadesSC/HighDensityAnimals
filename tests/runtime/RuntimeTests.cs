@@ -581,10 +581,27 @@ public sealed class RegressionSuite : GameComponent
             }
             var body = Body(DefDatabase<PawnRenderTreeDef>.GetNamed("Animal").root);
             Assert(body?.subworkerClasses.Contains(typeof(PawnRenderSubWorker_DenseAnimalScale)) == true, "Animal renderer scale hook not registered");
-            var pawn = Animal(density: 4); HighDensityAnimalsMod.Settings.maxVisualScale = 1.1f; DenseAnimalUtility.RefreshAllDenseAnimalCaches();
-            var scale = new Vector3(2f, 3f, 4f); var renderer = new PawnRenderSubWorker_DenseAnimalScale();
+            Near(DenseAnimalUtility.VisualScaleFactor(0), 1f, "Nonpositive density changed vanilla size");
+            Near(DenseAnimalUtility.VisualScaleFactor(1), 1f, "Density-one scale changed");
+            Near(DenseAnimalUtility.VisualScaleFactor(5), 1.75f, "Intermediate visual growth incorrect");
+            Near(DenseAnimalUtility.VisualScaleFactor(30), 2.5849625f, "Density-30 curve incorrect");
+            Near(DenseAnimalUtility.VisualScaleFactor(40), 2.7190223f, "Density-40 curve incorrect");
+            Near(DenseAnimalUtility.VisualScaleFactor(50), 2.8230074f, "Density-50 curve incorrect");
+            Near(DenseAnimalUtility.VisualScaleFactor(100), 3.1460148f, "Visual curve is capped");
+            var renderer = new PawnRenderSubWorker_DenseAnimalScale();
+            foreach (string kind in new[] { "Chicken", "Cow", "Thrumbo" }) {
+                var dense = Animal(kind, 25);
+                Near(dense.GetComp<CompDenseAnimal>().CachedVisualScaleFactor, 2.5f, kind + " density-25 cache incorrect");
+                var dimensions = new Vector3(2f, 3f, 4f);
+                renderer.TransformScale(null, new PawnDrawParms { pawn = dense }, ref dimensions);
+                Near(dimensions.x, 5f, kind + " rendered width incorrect");
+                Near(dimensions.z, 10f, kind + " rendered length incorrect");
+                Near(dimensions.y, 3f, kind + " renderer changed depth axis");
+            }
+            var pawn = Animal(density: 50);
+            var scale = new Vector3(2f, 3f, 4f);
             renderer.TransformScale(null, new PawnDrawParms { pawn = pawn }, ref scale);
-            Near(scale.x, 2.2f, "Rendered width exceeds cap"); Near(scale.z, 4.4f, "Rendered length exceeds cap"); Near(scale.y, 3f, "Renderer changed depth axis");
+            Near(scale.x, 5.6460148f, "Rendered width above density 25 incorrect"); Near(scale.z, 11.2920296f, "Rendered length above density 25 incorrect"); Near(scale.y, 3f, "Renderer changed depth axis");
             HighDensityAnimalsMod.Settings.scaleVisualSize = false; scale = new Vector3(2f, 3f, 4f);
             renderer.TransformScale(null, new PawnDrawParms { pawn = pawn }, ref scale);
             Near(scale.x, 2f, "Disabled visual scaling still transforms mesh"); Near(scale.z, 4f, "Disabled visual scaling still transforms mesh");
@@ -592,10 +609,11 @@ public sealed class RegressionSuite : GameComponent
         Case("settings", () => {
             var machine = Machine(10); var pawn = Animal(density: 4); machine.TryInsertAnimal(pawn);
             Assert(pawn.Suspended, "Contained pawn is not explicitly in stasis");
-            HighDensityAnimalsMod.Settings.scaleCombatStats = false; HighDensityAnimalsMod.Settings.maxVisualScale = 1.1f;
+            HighDensityAnimalsMod.Settings.scaleCombatStats = false;
+            pawn.GetComp<CompDenseAnimal>().SetDensity(5);
             DenseAnimalUtility.RefreshAllDenseAnimalCaches();
             Near(pawn.GetComp<CompDenseAnimal>().CachedMeleeDamageFactor, 1f, "Contained combat settings stale");
-            Near(pawn.GetComp<CompDenseAnimal>().CachedVisualScaleFactor, 1.1f, "Contained size settings stale");
+            Near(pawn.GetComp<CompDenseAnimal>().CachedVisualScaleFactor, 1.75f, "Contained size cache stale");
             long age = pawn.ageTracker.AgeBiologicalTicks; float hunger = pawn.needs.food.CurLevel;
             Advance(1000); Assert(pawn.ageTracker.AgeBiologicalTicks == age, "Contained pawn aged while in stasis");
             Near(pawn.needs.food.CurLevel, hunger, "Contained pawn ate while in stasis");

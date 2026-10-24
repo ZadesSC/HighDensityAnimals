@@ -1,5 +1,7 @@
 # Recorded verification
 
+The uncapped visual scaling curve and rebuilt assembly are verified in [uncapped-visual-scaling/README.md](uncapped-visual-scaling/README.md).
+
 The combined inheritance and sex-filter build is verified in [offspring-density-integrated/README.md](offspring-density-integrated/README.md).
 
 The earlier standalone live-birth density inheritance change is verified separately in [offspring-density-inheritance/README.md](offspring-density-inheritance/README.md).

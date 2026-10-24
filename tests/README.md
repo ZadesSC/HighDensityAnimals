@@ -19,7 +19,7 @@
 - Exact food shortage, sufficient supply, fractional remainder, rejected dense eggs, and storage filters.
 - Actual milk/shearing collection and butcher product stacks; health, nutrition capacity and market value; food-need depletion without eating jobs.
 - Dense egg laying/hatching; live births with normal litter counts and parental density averages rounded down. Covers equal/unequal parents, dense fathers, unknown fathers, seeded pig litters, nested births, exception cleanup, direct helpers, naturally ticked near-term completion, and pregnancy save/reload with changed parental density before birth.
-- Registered render scale hook, transformed dimensions/size cap, visual disable control; contained-pawn stasis, contained/world cache refresh, settings disable controls, single egg market scaling, specific command availability, numeric productivity displays.
+- Registered render scale hook, uncapped visual curve (including density 25 → 2.5× and densities above 25), transformed dimensions, visual disable control; contained-pawn stasis, contained/world cache refresh, settings disable controls, single egg market scaling, specific command availability, numeric productivity displays.
 - Two successive fusion cycles selected through normal colonist Hauling work, with feedstock accounting.
 - Fresh-process persistence of empty, single-animal, food-waiting, food-only, powered and paused machines; animal identities/density, timer, liquid nutrition, filters, species, target, automation and egg metadata, followed by normally ticked completion without another charge.
 - Fresh-process migration from deadline saves with absent new snapshot fields.
