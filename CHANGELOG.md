@@ -2,6 +2,7 @@
 
 ## 0.2.0
 
+- Use uncapped logarithmic visual scaling that reaches 2.5× at density 25; remove the maximum visual scale setting.
 - Keep normal live-birth litter sizes and give newborn animals the average parental density, rounded down; an unknown father counts as density 1.
 - Add a per-machine Densify dropdown for Both (default), Females only, or Males only; always require same-sex fusion and safely cancel/refund legacy mixed-sex cycles.
 - Add a per-machine Prevent density waste gizmo, enabled by default; disabling it allows overflowing fusion pairs with capped output and full input nutrition cost.

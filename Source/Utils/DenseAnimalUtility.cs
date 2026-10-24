@@ -121,8 +121,8 @@ namespace HighDensityAnimals
                 return 1f;
             }
 
-            float maxScale = HighDensityAnimalsMod.Settings?.maxVisualScale ?? 1.75f;
-            return Mathf.Min(maxScale, 1f + Mathf.Log(density, 2f) * 0.1f);
+            // Keep vanilla size at density 1 and reach 2.5x at density 25, with no visual cap.
+            return 1f + 1.5f * Mathf.Log(density, 25f);
         }
 
         public static float ArmorOffset(int density, float multiplier = 1f)

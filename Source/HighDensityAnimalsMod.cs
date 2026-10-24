@@ -34,7 +34,6 @@ namespace HighDensityAnimals
             bool oldScaleMarketValue = Settings.scaleMarketValue;
             bool oldScaleCombatStats = Settings.scaleCombatStats;
             bool oldScaleVisualSize = Settings.scaleVisualSize;
-            float oldMaxVisualScale = Settings.maxVisualScale;
 
             Listing_Standard listing = new Listing_Standard();
             listing.Begin(inRect);
@@ -48,12 +47,9 @@ namespace HighDensityAnimals
             listing.Gap();
             listing.Label("HDA_Maxdensity".Translate() + Settings.maxDensity);
             Settings.maxDensity = (int)listing.Slider(Settings.maxDensity, 2f, 100f);
-            listing.Label("HDA_Maxvisualscale".Translate() + Settings.maxVisualScale.ToString("0.00") + "x");
-            Settings.maxVisualScale = listing.Slider(Settings.maxVisualScale, 1f, 3f);
             listing.End();
             if (oldScaleHealth != Settings.scaleHealth || oldScaleMarketValue != Settings.scaleMarketValue || oldScaleCombatStats != Settings.scaleCombatStats ||
-                oldScaleVisualSize != Settings.scaleVisualSize ||
-                oldMaxVisualScale != Settings.maxVisualScale)
+                oldScaleVisualSize != Settings.scaleVisualSize)
             {
                 DenseAnimalUtility.RefreshAllDenseAnimalCaches();
             }

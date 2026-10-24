@@ -24,11 +24,11 @@ Changing the global cap never reduces an existing animal's density. A cycle alre
 - Milk, wool, unfertilized egg counts, meat and leather scale linearly with density.
 - Food consumption and stomach capacity scale linearly too; density reduces pawn count, not feed costs.
 - Health scales by the square root of density. Melee damage and armor increase more slowly. Settings can disable health/combat scaling.
-- Visual size increases slowly, subject to the configured maximum. Market value scales linearly when enabled.
+- Visual width and height follow `1 + 1.5 × log₂(density) / log₂(25)` with no visual cap: density 1 stays at normal size, density 25 reaches 2.5×, and density 50 reaches about 2.82×. Visual scaling can be disabled. Market value scales linearly when enabled.
 - A fertilized egg stores a dense embryo and hatches into one dense offspring. Dense eggs never stack or serve as densifier feedstock.
 - Live births retain the species' normal litter size. Each newborn inherits the average of the mother's and father's densities, rounded down; an unknown father counts as density 1. Parent densities are read at birth, including for existing pregnancies. For example, density 5 and 2 parents produce density 3 offspring, and a cow still produces one calf.
 
-Current defaults allow density up to 25 and visual scale up to 1.75. These are initial balance choices, not a measured recommendation for every colony.
+The default maximum density is 25, producing 2.5× visual size. Raising the density limit lets the curve continue; the former maximum visual scale setting is no longer used, including values saved by older versions. These are initial balance choices, not a measured recommendation for every colony.
 
 ## Build
 
