@@ -1,0 +1,59 @@
+{
+  "assemblies": [
+    "1.7/Assemblies/HighDensityAnimals.dll"
+  ],
+  "assemblyMode": "compile",
+  "commands": [
+    [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "tests",
+      "-p",
+      "test_*.py"
+    ],
+    [
+      "dotnet",
+      "build",
+      "Source/HighDensityAnimals.csproj",
+      "-c",
+      "Release",
+      "-p:GameManagedPath={references}/game",
+      "-p:HarmonyAssembly={references}/harmony/0Harmony.dll"
+    ]
+  ],
+  "defaultBranch": "main",
+  "dependencyNotes": [],
+  "include": [
+    "About",
+    "1.7",
+    "Languages",
+    "LoadFolders.xml",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "needsDotnet": true,
+  "references": [
+    {
+      "destination": "game",
+      "package": "krafs.rimworld.ref",
+      "prefix": "ref/net10.0/",
+      "version": "1.7.4982-unstable"
+    },
+    {
+      "destination": "harmony",
+      "package": "lib.harmony",
+      "prefix": "lib/net10.0/",
+      "version": "2.4.2"
+    }
+  ],
+  "schemaVersion": 1,
+  "slug": "HighDensityAnimals",
+  "sourceGlobs": [],
+  "supportedVersions": [
+    "1.7"
+  ]
+}
